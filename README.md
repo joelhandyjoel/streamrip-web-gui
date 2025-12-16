@@ -51,7 +51,7 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
 
 ```
   streamrip:
-    image: anoddname/streamrip-web-gui:latest 
+    image: joelhandyjoel/streamrip-web-gui:latest 
     container_name: streamrip-web
     user: "1000:1000"
     environment:
@@ -186,6 +186,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
