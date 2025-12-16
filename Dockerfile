@@ -1,42 +1,58 @@
 FROM python:3.11-slim
 
-# Install system dependencies
+# ===============================
+# Default overridable values
+# ===============================
+ENV PUID=1000 \
+    PGID=1000 \
+    STREAMRIP_CONFIG_DIR=/config \
+    STREAMRIP_DOWNLOAD_DIR=/downloads \
+    TZ=UTC
+
+# ===============================
+# System dependencies (unchanged)
+# ===============================
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
     gcc \
     python3-dev \
+    gosu \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN groupadd -g 1000 appuser && \
-    useradd -r -u 1000 -g appuser appuser
-
-# Set working directory
+# ===============================
+# Working directory
+# ===============================
 WORKDIR /app
 
-# Install Python dependencies
+# ===============================
+# Python dependencies
+# ===============================
 RUN pip install --no-cache-dir \
     flask \
     flask-cors \
-    streamrip \
     gunicorn \
     gevent
 
-# Copy application files
+# Install *vendored* streamrip instead of pip streamrip
+COPY vendor/streamrip /vendor/streamrip
+RUN pip install --no-cache-dir /vendor/streamrip
+
+# ===============================
+# App files
+# ===============================
 COPY app.py /app/
 COPY templates /app/templates/
 COPY static /app/static/
 
-# Create necessary directories with proper ownership
-RUN mkdir -p /downloads /logs /config/streamrip && \
-    chown -R 1000:1000 /downloads /logs /config
+# ===============================
+# Entrypoint
+# ===============================
+COPY docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Switch to non-root user
-USER 1000:1000
-
-# Expose port
 EXPOSE 5000
 
-# Run with aggressive worker recycling
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gevent", "--workers", "2", "--timeout", "60", "app:app"]
