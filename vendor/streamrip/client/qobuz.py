@@ -439,6 +439,35 @@ class QobuzClient(Client):
         }
         return await self._api_request("track/getFileUrl", params)
 
+
+    async def inspect_track_quality(self, track_id: str, max_quality: int) -> dict:
+        assert self.secret is not None and self.logged_in
+    
+        results = []
+        for q in range(max_quality, 0, -1):
+            status, resp = await self._request_file_url(track_id, q, self.secret)
+    
+            if status == 200 and "url" in resp:
+                results.append({
+                    "quality_index": q,
+                    "format_id": self.get_quality(q),
+                    "bit_depth": resp.get("bit_depth"),
+                    "sampling_rate": resp.get("sampling_rate"),
+                    "available": True,
+                })
+            else:
+                results.append({
+                    "quality_index": q,
+                    "format_id": self.get_quality(q),
+                    "available": False,
+                    "error": resp.get("message") or resp.get("error"),
+                })
+    
+        return {
+            "track_id": track_id,
+            "results": results,
+        }
+        
     async def _api_request(self, epoint: str, params: dict) -> tuple[int, dict]:
         """Make a request to the API.
         returns: status code, json parsed response
