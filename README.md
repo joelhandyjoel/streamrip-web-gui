@@ -50,21 +50,25 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
 1: Add this to your `docker-compose.yml`
 
 ```
-  streamrip:
-    image: joelhandyjoel/streamrip-web-gui:latest 
+streamrip:
+    build: .
+    image: streamrip-web-gui:latest
     container_name: streamrip-web
-    user: "1000:1000"
+
     environment:
-      - HOME=/config
-      - XDG_CONFIG_HOME=/config
-      - STREAMRIP_CONFIG=/config/streamrip/config.toml
-      - DOWNLOAD_DIR=/music
-      - MAX_CONCURRENT_DOWNLOADS=1
+      PUID: 1000
+      PGID: 1000
+      STREAMRIP_CONFIG_DIR: /config
+      STREAMRIP_DOWNLOAD_DIR: /music
+      MAX_CONCURRENT_DOWNLOADS: 1
+
     volumes:
-      - /home/YOURUSERNAME/.config/streamrip:/config/streamrip:rw
-      - /home/YOURUSERNAME/media-server/data/Music:/music:rw
+      - /mnt/docker/streamrip:/config
+      - /mnt/media/Music:/music
+
     ports:
       - "5002:5000"
+
     restart: unless-stopped
 ```
 
@@ -82,23 +86,29 @@ cd streamrip-web
 
 2. Create a `docker-compose.yml` file:
 ```yaml
-services:    
+version: "3.8"
+
+services:
   streamrip:
-        build: ./streamrip-web
-        container_name: streamrip
-        user: "1000:1000" 
-        environment:
-          - HOME=/config
-          - XDG_CONFIG_HOME=/config
-          - STREAMRIP_CONFIG=/config/streamrip/config.toml
-          - DOWNLOAD_DIR=/music
-          - MAX_CONCURRENT_DOWNLOADS=2
-        volumes:
-          - /home/YOURUSERNAME/.config/streamrip:/config/streamrip:rw
-          - /home/YOURUSERNAME/media-server/data/Music:/music:rw
-        ports:
-          - "5002:5000"
-        restart: unless-stopped
+    build: .
+    image: streamrip-web-gui:latest
+    container_name: streamrip-web
+
+    environment:
+      PUID: 1000
+      PGID: 1000
+      STREAMRIP_CONFIG_DIR: /config
+      STREAMRIP_DOWNLOAD_DIR: /music
+      MAX_CONCURRENT_DOWNLOADS: 1
+
+    volumes:
+      - /mnt/docker/streamrip:/config
+      - /mnt/media/Music:/music
+
+    ports:
+      - "5002:5000"
+
+    restart: unless-stopped
 ```
 
 3. Build and run:
@@ -186,6 +196,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
