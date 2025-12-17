@@ -52,7 +52,7 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
 ```
 streamrip:
     build: .
-    image: streamrip-web-gui:latest
+    image: joelhandyjoel/streamrip-web-gui:latest
     container_name: streamrip-web
 
     environment:
@@ -91,7 +91,7 @@ version: "3.8"
 services:
   streamrip:
     build: .
-    image: streamrip-web-gui:latest
+    image: joelhandyjoel/streamrip-web-gui:latest
     container_name: streamrip-web
 
     environment:
@@ -196,6 +196,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
