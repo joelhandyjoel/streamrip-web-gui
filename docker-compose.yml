@@ -2,19 +2,28 @@ version: "3.8"
 
 services:
   streamrip:
-    build: .
-    image: streamrip-web-gui:latest
     container_name: streamrip-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: joelhandyjoel/streamrip-web-gui:latest
+
+    user: "1000:1001"
 
     environment:
-      PUID: 1000
-      PGID: 1001
-      STREAMRIP_CONFIG_DIR: /config
-      STREAMRIP_DOWNLOAD_DIR: /music
-      TZ: UTC
+      # App paths (can be overridden in Portainer)
+      CONFIG_DIR: /config
+      DOWNLOAD_DIR: /music
+
+      # Streamrip expectations
+      HOME: /config
+      XDG_CONFIG_HOME: /config
+      STREAMRIP_CONFIG: /config/streamrip/config.toml
+
+      MAX_CONCURRENT_DOWNLOADS: 1
 
     volumes:
-      - /mnt/docker/streamrip:/config
+      - /mnt/docker/streamrip:/config/streamrip
       - /mnt/media/Music:/music
 
     ports:
