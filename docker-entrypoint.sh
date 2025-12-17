@@ -1,35 +1,34 @@
 #!/bin/sh
 set -e
 
-# Create group if it doesn't exist
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
+
+CONFIG_DIR=${STREAMRIP_CONFIG_DIR:-/config}
+DOWNLOAD_DIR=${STREAMRIP_DOWNLOAD_DIR:-/downloads}
+
+echo "[entrypoint] Using UID:GID = ${PUID}:${PGID}"
+echo "[entrypoint] Config dir  = ${CONFIG_DIR}"
+echo "[entrypoint] Download dir = ${DOWNLOAD_DIR}"
+
+# Create group if missing
 if ! getent group appgroup >/dev/null 2>&1; then
-    addgroup --gid "$PGID" appgroup
+  groupadd -g "$PGID" appgroup
 fi
 
-# Create user if it doesn't exist
-if ! getent passwd appuser >/dev/null 2>&1; then
-    adduser \
-        --uid "$PUID" \
-        --gid "$PGID" \
-        --disabled-password \
-        --gecos "" \
-        appuser
+# Create user if missing
+if ! id appuser >/dev/null 2>&1; then
+  useradd -u "$PUID" -g "$PGID" -m appuser
 fi
 
 # Create directories
-mkdir -p "$STREAMRIP_CONFIG_DIR/streamrip" "$STREAMRIP_DOWNLOAD_DIR" /logs
+mkdir -p "${CONFIG_DIR}/streamrip" "${DOWNLOAD_DIR}"
+chown -R "$PUID:$PGID" "${CONFIG_DIR}" "${DOWNLOAD_DIR}"
 
-# Fix permissions (best effort)
-chown -R "$PUID:$PGID" \
-    "$STREAMRIP_CONFIG_DIR" \
-    "$STREAMRIP_DOWNLOAD_DIR" \
-    /logs || true
+# Export paths so streamrip + app can see them
+export HOME="${CONFIG_DIR}"
+export XDG_CONFIG_HOME="${CONFIG_DIR}"
+export STREAMRIP_CONFIG="${CONFIG_DIR}/streamrip/config.toml"
+export DOWNLOAD_DIR="${DOWNLOAD_DIR}"
 
-# Streamrip expects these environment variables
-export HOME="$STREAMRIP_CONFIG_DIR"
-export XDG_CONFIG_HOME="$STREAMRIP_CONFIG_DIR"
-export STREAMRIP_CONFIG="$STREAMRIP_CONFIG_DIR/streamrip/config.toml"
-export DOWNLOAD_DIR="$STREAMRIP_DOWNLOAD_DIR"
-
-# Drop privileges and start app
 exec gosu appuser "$@"
