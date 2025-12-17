@@ -23,7 +23,6 @@ WORKDIR /app
 RUN pip install --no-cache-dir \
     flask \
     flask-cors \
-    streamrip \
     gunicorn \
     gevent
 
