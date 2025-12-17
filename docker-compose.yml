@@ -7,26 +7,17 @@ services:
     container_name: streamrip-web
 
     environment:
-      # ---- User / Group (optional overrides) ----
       PUID: 1000
-      PGID: 1000
-
-      # ---- Streamrip paths (optional overrides) ----
+      PGID: 1001
       STREAMRIP_CONFIG_DIR: /config
-      STREAMRIP_DOWNLOAD_DIR: /downloads
-
-      # ---- App behaviour ----
-      MAX_CONCURRENT_DOWNLOADS: 1
+      STREAMRIP_DOWNLOAD_DIR: /music
       TZ: UTC
 
     volumes:
-      # Config + database
-      - ./config:/config
-
-      # Downloads
-      - ./downloads:/downloads
+      - /mnt/docker/streamrip:/config
+      - /mnt/media/Music:/music
 
     ports:
-      - "5000:5000"
+      - "5002:5000"
 
     restart: unless-stopped
