@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  streamrip:
+    build: .
+    image: streamrip-web-gui:latest
+    container_name: streamrip-web
+
+    environment:
+      # ---- User / Group (optional overrides) ----
+      PUID: 1000
+      PGID: 1000
+
+      # ---- Streamrip paths (optional overrides) ----
+      STREAMRIP_CONFIG_DIR: /config
+      STREAMRIP_DOWNLOAD_DIR: /downloads
+
+      # ---- App behaviour ----
+      MAX_CONCURRENT_DOWNLOADS: 1
+      TZ: UTC
+
+    volumes:
+      # Config + database
+      - ./config:/config
+
+      # Downloads
+      - ./downloads:/downloads
+
+    ports:
+      - "5000:5000"
+
+    restart: unless-stopped
