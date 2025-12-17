@@ -8,8 +8,6 @@ services:
       dockerfile: Dockerfile
     image: joelhandyjoel/streamrip-web-gui:latest
 
-    user: "1000:1001"
-
     environment:
       # App paths (can be overridden in Portainer)
       CONFIG_DIR: /config
