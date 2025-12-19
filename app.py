@@ -197,25 +197,34 @@ def api_history():
 @app.route("/api/delete-file", methods=["POST"])
 def api_delete_file():
     data = request.json or {}
-    rel_path = data.get("path")
+    path = data.get("path")
 
-    if not rel_path:
-        return jsonify({"error": "path required"}), 400
+    if not path:
+        return jsonify({"error": "Missing path"}), 400
 
-    abs_path = os.path.abspath(os.path.join(DOWNLOAD_DIR, rel_path))
+    full_path = os.path.join(DOWNLOAD_DIR, path)
 
-    # 🔒 Safety check (prevents deleting /etc etc)
-    if not abs_path.startswith(os.path.abspath(DOWNLOAD_DIR)):
-        return jsonify({"error": "invalid path"}), 403
-
-    if not os.path.exists(abs_path):
-        return jsonify({"error": "file not found"}), 404
+    if not os.path.exists(full_path):
+        return jsonify({"error": "File not found"}), 404
 
     try:
-        os.remove(abs_path)
-        return jsonify({"status": "deleted"})
+        # 1️⃣ Delete the file
+        os.remove(full_path)
+
+        # 2️⃣ Reset Streamrip DB
+        db_path = "/config/streamrip/downloads.db"
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+        return jsonify({
+            "status": "ok",
+            "message": "File deleted and download database reset"
+        })
+
     except Exception as e:
+        logger.exception("Failed to delete file")
         return jsonify({"error": str(e)}), 500
+
 
 
 
