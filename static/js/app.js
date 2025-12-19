@@ -57,17 +57,24 @@ function handleSSEMessage(data) {
 
 function handleDownloadStarted(data) {
     activeDownloads.set(data.id, {
-        id: data.id,
-        metadata: data.metadata || {},
-        status: 'downloading'
-    });
+       id: data.id,
+       metadata: data.metadata,
+       status: 'downloading',
+       logs: []
+   });
     if (currentTab === 'active') renderActiveDownloads();
 }
 
 function handleDownloadProgress(data) {
     const d = activeDownloads.get(data.id);
-    if (d) d.output = data.output;
+    if (!d) return;
+
+    if (data.line) {
+        d.logs.push(data.line);
+        updateDownloadLog(data.id, d.logs);
+    }
 }
+
 
 function handleDownloadCompleted(data) {
     const d = activeDownloads.get(data.id);
