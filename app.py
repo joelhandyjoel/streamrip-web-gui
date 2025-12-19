@@ -1,367 +1,324 @@
-/* ===============================
-   GLOBAL STATE
-================================ */
-
-let currentTab = 'active';
-let currentSearchType = 'album';
-let currentPage = 1;
-let itemsPerPage = 10;
-let totalResults = 0;
-let allSearchResults = [];
-
-let eventSource = null;
-let activeDownloads = new Map();
-let downloadHistory = [];
-
-const qualityCache = new Map();
-
-/* ===============================
-   SSE
-================================ */
-
-function initializeSSE() {
-    if (eventSource) eventSource.close();
-
-    eventSource = new EventSource('/api/events');
-
-    eventSource.onerror = () => {
-        setTimeout(initializeSSE, 5000);
-    };
-
-    eventSource.onmessage = (event) => {
-        handleSSEMessage(JSON.parse(event.data));
-    };
-}
-
-function handleSSEMessage(data) {
-    switch (data.type) {
-        case 'download_started': handleDownloadStarted(data); break;
-        case 'download_progress': handleDownloadProgress(data); break;
-        case 'download_completed': handleDownloadCompleted(data); break;
-        case 'download_error': handleDownloadError(data); break;
-    }
-}
-
-/* ===============================
-   DOWNLOAD HANDLING
-================================ */
-
-function handleDownloadStarted(data) {
-    activeDownloads.set(data.id, {
-        id: data.id,
-        metadata: data.metadata,
-        status: 'downloading'
-    });
-    if (currentTab === 'active') renderActiveDownloads();
-}
-
-function handleDownloadProgress(data) {
-    const d = activeDownloads.get(data.id);
-    if (d) d.output = data.output;
-}
-
-function handleDownloadCompleted(data) {
-    const d = activeDownloads.get(data.id);
-    if (!d) return;
-
-    d.status = data.status;
-    d.output = data.output;
-
-    setTimeout(() => {
-        downloadHistory.unshift(d);
-        activeDownloads.delete(data.id);
-        if (currentTab === 'active') renderActiveDownloads();
-    }, 2000);
-}
-
-function handleDownloadError(data) {
-    const d = activeDownloads.get(data.id);
-    if (!d) return;
-
-    d.status = 'failed';
-    d.error = data.error;
-
-    setTimeout(() => {
-        downloadHistory.unshift(d);
-        activeDownloads.delete(data.id);
-        if (currentTab === 'active') renderActiveDownloads();
-    }, 2000);
-}
-
-function renderActiveDownloads() {
-    const el = document.getElementById('activeDownloads');
-    if (!el) return;
-
-    if (!activeDownloads.size) {
-        el.innerHTML = `<div class="empty-state">NO ACTIVE DOWNLOADS</div>`;
-        return;
-    }
-
-    el.innerHTML = [...activeDownloads.values()].map(d => `
-        <div class="download-item ${d.status}">
-            <div class="download-content">
-                <div class="download-info">
-                    <div class="download-title">${d.metadata?.title || 'Unknown'}</div>
-                    <div class="download-artist">${d.metadata?.artist || ''}</div>
-                    <span class="status-badge ${d.status}">${d.status}</span>
-                </div>
-                <div class="download-spinner"></div>
-            </div>
-        </div>
-    `).join('');
-}
-
-/* ===============================
-   SEARCH
-================================ */
-
-function setSearchType(type, el) {
-    currentSearchType = type;
-    document.querySelectorAll('.search-type-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-}
-
-async function searchMusic() {
-    const query = document.getElementById('searchInput').value.trim();
-    const source = document.getElementById('searchSource').value;
-    if (!query) return alert('Enter search query');
-
-    document.getElementById('searchResults').innerHTML =
-        `<div class="empty-state">SEARCHING…</div>`;
-
-    const res = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, type: currentSearchType, source })
-    });
-
-    const data = await res.json();
-    if (!res.ok || !data.results) {
-        document.getElementById('searchResults').innerHTML =
-            `<div class="empty-state">SEARCH FAILED</div>`;
-        return;
-    }
-
-    allSearchResults = data.results;
-    totalResults = data.results.length;
-    currentPage = 1;
-    displayCurrentPage();
-}
-
-function displayCurrentPage() {
-    const start = (currentPage - 1) * itemsPerPage;
-    const page = allSearchResults.slice(start, start + itemsPerPage);
-
-    const el = document.getElementById('searchResults');
-    if (!page.length) {
-        el.innerHTML = `<div class="empty-state">NO RESULTS</div>`;
-        return;
-    }
-
-    el.innerHTML = page.map(r => `
-        <div class="search-result-item"
-            data-id="${r.id}"
-            data-source="${r.service}"
-            data-type="${r.type}">
-
-            <div class="result-album-art placeholder" id="art-${r.id}">🎵</div>
-
-            <div class="result-info">
-                <span class="result-service">${r.service}</span>
-
-                ${r.service === 'qobuz' && (r.type === 'track' || r.type === 'album')
-                    ? `<span class="quality-badge loading" id="quality-${r.id}">
-                        Checking…
-                       </span>`
-                    : ''}
-
-                <div class="result-title">${r.title || ''}</div>
-                <div class="result-artist">${r.artist || r.desc}</div>
-                <div class="result-id">${r.id}</div>
-            </div>
-
-            <button class="result-download-btn"
-                onclick="downloadFromUrl('${r.url}')">
-                DOWNLOAD
-            </button>
-        </div>
-    `).join('');
-
-    updatePaginationControls();
-    loadAlbumArtForVisibleItems();
-    inspectVisibleMediaQuality();
-}
-
-/* ===============================
-   PAGINATION
-================================ */
-
-function updatePaginationControls() {
-    const pages = Math.ceil(totalResults / itemsPerPage);
-    document.getElementById('pageInfo').textContent =
-        `Page ${currentPage} of ${pages}`;
-}
-
-function changePage(dir) {
-    const pages = Math.ceil(totalResults / itemsPerPage);
-    const next = currentPage + dir;
-    if (next < 1 || next > pages) return;
-    currentPage = next;
-    displayCurrentPage();
-}
-
-/* ===============================
-   QUALITY (TRACK + ALBUM)
-================================ */
-
-async function fetchMediaQuality(source, type, id) {
-    const key = `${source}:${type}:${id}`;
-    if (qualityCache.has(key)) return qualityCache.get(key);
-
-    const res = await fetch('/api/quality', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source, type, id })
-    });
-
-    const data = await res.json();
-    qualityCache.set(key, data);
-    return data;
-}
-
-function applyQuality(id, data) {
-    const el = document.getElementById(`quality-${id}`);
-    if (!el) return;
-
-    el.classList.remove('loading', 'hires', 'cd', 'unknown');
-
-    if (!data || !data.quality || !data.quality.bit_depth) {
-        el.textContent = 'Unknown';
-        el.classList.add('unknown');
-        return;
-    }
-
-    const q = data.quality;
-    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
-    el.classList.add(q.bit_depth > 16 ? 'hires' : 'cd');
-}
-
-function inspectVisibleMediaQuality() {
-    requestAnimationFrame(() => {
-        document.querySelectorAll('.search-result-item').forEach(async el => {
-            const { source, type, id } = el.dataset;
-            if (source === 'qobuz' && (type === 'track' || type === 'album')) {
-                const data = await fetchMediaQuality(source, type, id);
-                applyQuality(id, data);
-            }
-        });
-    });
-}
-
-/* ===============================
-   ALBUM ART
-================================ */
-
-async function loadAlbumArtForVisibleItems() {
-    document.querySelectorAll('.search-result-item').forEach(async el => {
-        const id = el.dataset.id;
-        const src = el.dataset.source;
-        const type = el.dataset.type;
-
-        const res = await fetch(`/api/album-art?source=${src}&type=${type}&id=${id}`);
-        const data = await res.json();
-        if (!data.album_art) return;
-
-        document.getElementById(`art-${id}`).innerHTML =
-            `<img src="${data.album_art}" class="result-album-art">`;
-    });
-}
-
-/* ===============================
-   DOWNLOAD
-================================ */
-
-async function downloadFromUrl(url) {
-    const q = document.getElementById('qualitySelect').value;
-    await fetch('/api/download-from-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, quality: parseInt(q) })
-    });
-    switchTab('active');
-}
-
-/* ===============================
-   CONFIG
-================================ */
-
-async function loadConfig() {
-    const editor = document.getElementById('configEditor');
-    if (!editor) return;
-
-    editor.value = 'Loading config…';
-
-    try {
-        const res = await fetch('/api/config');
-        const data = await res.json();
-        editor.value = data.config || '';
-    } catch {
-        editor.value = 'Failed to load config';
-    }
-}
-
-/* ===============================
-   FILES
-================================ */
-
-async function loadFiles() {
-    const container = document.getElementById('fileList');
-    if (!container) return;
-
-    container.innerHTML = '<div class="empty-state">Loading files…</div>';
-
-    try {
-        const res = await fetch('/api/files');
-        const data = await res.json();
-
-        if (!data.files || !data.files.length) {
-            container.innerHTML = '<div class="empty-state">NO FILES FOUND</div>';
-            return;
+import os
+import json
+import time
+import queue
+import threading
+import tempfile
+import subprocess
+import logging
+import re
+import requests
+
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+
+# ------------------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------------------
+# App setup
+# ------------------------------------------------------------------------------
+app = Flask(__name__)
+
+STREAMRIP_CONFIG = os.environ.get(
+    "STREAMRIP_CONFIG",
+    "/config/streamrip/config.toml"
+)
+DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/music")
+MAX_CONCURRENT_DOWNLOADS = int(os.environ.get("MAX_CONCURRENT_DOWNLOADS", "2"))
+
+download_queue = queue.Queue()
+active_downloads = {}
+download_history = []
+sse_clients = []
+
+# ------------------------------------------------------------------------------
+# SSE helpers
+# ------------------------------------------------------------------------------
+def broadcast_sse(data):
+    msg = f"data: {json.dumps(data)}\n\n"
+    dead = []
+    for q in sse_clients:
+        try:
+            q.put(msg)
+        except Exception:
+            dead.append(q)
+    for q in dead:
+        sse_clients.remove(q)
+
+@app.route("/api/events")
+def sse_events():
+    def gen():
+        q = queue.Queue()
+        sse_clients.append(q)
+        try:
+            yield 'data: {"type":"connected"}\n\n'
+            while True:
+                try:
+                    yield q.get(timeout=30)
+                except queue.Empty:
+                    continue
+        finally:
+            if q in sse_clients:
+                sse_clients.remove(q)
+
+    return Response(
+        stream_with_context(gen()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+# ------------------------------------------------------------------------------
+# Download worker
+# ------------------------------------------------------------------------------
+class DownloadWorker(threading.Thread):
+    daemon = True
+
+    def run(self):
+        while True:
+            task = download_queue.get()
+            if not task:
+                continue
+
+            task_id = task["id"]
+            url = task["url"]
+            quality = task.get("quality", 3)
+            metadata = task.get("metadata", {})
+
+            active_downloads[task_id] = {"status": "downloading", "metadata": metadata}
+            broadcast_sse({
+                "type": "download_started",
+                "id": task_id,
+                "metadata": metadata
+            })
+
+            cmd = ["rip"]
+            if os.path.exists(STREAMRIP_CONFIG):
+                cmd += ["--config-path", STREAMRIP_CONFIG]
+
+            cmd += ["-f", DOWNLOAD_DIR, "-q", str(quality), "url", url]
+
+            output = []
+
+            try:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+
+                for line in proc.stdout:
+                    output.append(line.rstrip())
+                    if len(output) % 10 == 0:
+                        broadcast_sse({
+                            "type": "download_progress",
+                            "id": task_id,
+                            "output": "\n".join(output[-5:]),
+                        })
+
+                proc.wait()
+                status = "completed" if proc.returncode == 0 else "failed"
+
+                broadcast_sse({
+                    "type": "download_completed",
+                    "id": task_id,
+                    "status": status,
+                    "output": "\n".join(output),
+                    "metadata": metadata,
+                })
+
+            except Exception as e:
+                broadcast_sse({
+                    "type": "download_error",
+                    "id": task_id,
+                    "error": str(e),
+                })
+
+            finally:
+                active_downloads.pop(task_id, None)
+                download_history.append({
+                    "id": task_id,
+                    "metadata": metadata,
+                    "output": "\n".join(output),
+                })
+                download_queue.task_done()
+
+for _ in range(MAX_CONCURRENT_DOWNLOADS):
+    DownloadWorker().start()
+
+# ------------------------------------------------------------------------------
+# Routes
+# ------------------------------------------------------------------------------
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/api/download", methods=["POST"])
+def api_download():
+    data = request.json or {}
+    url = data.get("url")
+    quality = data.get("quality", 3)
+
+    if not url:
+        return jsonify({"error": "URL required"}), 400
+
+    task_id = f"dl_{int(time.time()*1000)}"
+    download_queue.put({
+        "id": task_id,
+        "url": url,
+        "quality": quality,
+        "metadata": {},
+    })
+
+    return jsonify({"task_id": task_id, "status": "queued"})
+
+@app.route("/api/download-from-url", methods=["POST"])
+def api_download_from_url():
+    return api_download()
+
+@app.route("/api/search", methods=["POST"])
+def api_search():
+    data = request.json or {}
+    query = data.get("query")
+    source = data.get("source", "qobuz")
+    kind = data.get("type", "album")
+
+    if not query:
+        return jsonify({"error": "query required"}), 400
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        out = tmp.name
+
+    cmd = ["rip"]
+    if os.path.exists(STREAMRIP_CONFIG):
+        cmd += ["--config-path", STREAMRIP_CONFIG]
+    cmd += ["search", "--output-file", out, source, kind, query]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        return jsonify({"error": "search failed"}), 500
+
+    try:
+        with open(out) as f:
+            items = json.load(f)
+    finally:
+        os.unlink(out)
+
+    results = []
+    for i in items:
+        results.append({
+            "id": i.get("id"),
+            "service": i.get("source", source),
+            "type": i.get("media_type", kind),
+            "title": i.get("desc"),
+            "artist": i.get("artist"),
+            "url": f"https://open.qobuz.com/{i.get('media_type')}/{i.get('id')}"
+        })
+
+    return jsonify({"results": results})
+
+# ------------------------------------------------------------------------------
+# Qobuz helpers
+# ------------------------------------------------------------------------------
+def get_qobuz_app_id():
+    return "798273057"
+
+# ------------------------------------------------------------------------------
+# Quality endpoint
+# ------------------------------------------------------------------------------
+@app.route("/api/quality", methods=["POST"])
+def api_quality():
+    data = request.json or {}
+    source = data.get("source")
+    media_type = data.get("type")
+    item_id = data.get("id")
+
+    if source != "qobuz" or not item_id:
+        return jsonify({"quality": None})
+
+    try:
+        app_id = get_qobuz_app_id()
+
+        if media_type == "track":
+            url = "https://www.qobuz.com/api.json/0.2/track/get"
+            params = {"track_id": item_id, "app_id": app_id}
+        elif media_type == "album":
+            url = "https://www.qobuz.com/api.json/0.2/album/get"
+            params = {"album_id": item_id, "app_id": app_id}
+        else:
+            return jsonify({"quality": None})
+
+        r = requests.get(url, params=params, timeout=5)
+        if r.status_code != 200:
+            return jsonify({"quality": None})
+
+        data = r.json()
+
+        quality = {
+            "bit_depth": data.get("maximum_bit_depth"),
+            "sample_rate": data.get("maximum_sampling_rate"),
+            "channels": data.get("maximum_channel_count"),
+            "hires": data.get("hires"),
+            "label": data.get("maximum_technical_specifications"),
         }
 
-        container.innerHTML = data.files.map(f => `
-            <div class="file-item">
-                <div class="file-name">${f.name}</div>
-                <div class="file-meta">${f.size}</div>
-            </div>
-        `).join('');
-    } catch {
-        container.innerHTML = '<div class="empty-state">FAILED TO LOAD FILES</div>';
-    }
-}
+        return jsonify({"quality": quality})
 
-/* ===============================
-   TABS
-================================ */
+    except Exception:
+        logger.exception("quality error")
+        return jsonify({"quality": None})
 
-function switchTab(tab, el) {
-    currentTab = tab;
+# ------------------------------------------------------------------------------
+# Album art
+# ------------------------------------------------------------------------------
+@app.route("/api/album-art")
+def api_album_art():
+    source = request.args.get("source")
+    media_type = request.args.get("type")
+    item_id = request.args.get("id")
 
-    if (el) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
-    }
+    if source != "qobuz" or not item_id:
+        return jsonify({"album_art": ""})
 
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.getElementById(tab + 'Tab')?.classList.add('active');
+    try:
+        app_id = get_qobuz_app_id()
 
-    if (tab === 'active') renderActiveDownloads();
-    if (tab === 'config') loadConfig();
-    if (tab === 'files') loadFiles();
-}
+        if media_type == "track":
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/track/get",
+                params={"track_id": item_id, "app_id": app_id},
+                timeout=5,
+            )
+            image = r.json().get("album", {}).get("image", {}).get("large")
+        else:
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/album/get",
+                params={"album_id": item_id, "app_id": app_id},
+                timeout=5,
+            )
+            image = r.json().get("image", {}).get("large")
 
-/* ===============================
-   INIT
-================================ */
+        return jsonify({"album_art": image or ""})
 
-window.addEventListener('load', initializeSSE);
+    except Exception:
+        logger.exception("album art error")
+        return jsonify({"album_art": ""})
+
+# ------------------------------------------------------------------------------
+# Config
+# ------------------------------------------------------------------------------
+@app.route("/api/config", methods=["GET"])
+def api_config():
+    if not os.path.exists(STREAMRIP_CONFIG):
+        return jsonify({"config": ""})
+
+    with open(STREAMRIP_CONFIG) as f:
+        return jsonify({"config": f.read()})
+
+# ------------------------------------------------------------------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
