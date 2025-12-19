@@ -93,18 +93,21 @@ class DownloadWorker(threading.Thread):
                 "status": status,
                 "output": "\n".join(output),
                 "metadata": metadata,
-                "completed_at": time.time(),
             }
             
-            # store history FIRST
+            # store history
             download_history.append(entry)
             
-            # notify UI
+            # notify UI (DO NOT spread blindly)
             broadcast_sse({
                 "type": "download_completed",
-                **entry,
+                "id": task_id,
+                "status": status,
+                "output": entry["output"],
+                "metadata": metadata,
             })
-            
+
+    
             # remove from active
             active_downloads.pop(task_id, None)
 
