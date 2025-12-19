@@ -259,6 +259,21 @@ def is_downloaded_qobuz(media_type, media_id):
     finally:
         conn.close()
 
+@app.route("/api/is-downloaded", methods=["POST"])
+def api_is_downloaded():
+    data = request.json or {}
+    source = data.get("source")
+    media_type = data.get("type")
+    media_id = data.get("id")
+
+    if source != "qobuz" or not media_id:
+        return jsonify({"downloaded": False})
+
+    return jsonify({
+        "downloaded": is_downloaded_qobuz(media_type, media_id)
+    })
+
+
 
 @app.route("/api/delete-folder", methods=["POST"])
 def api_delete_folder():
