@@ -1018,3 +1018,13 @@ button:disabled {
     font-size: 10px;
 }
 
+.result-download-btn.downloaded {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--border);
+}
+
+.result-download-btn.downloaded:hover {
+    background: transparent;
+    color: var(--text-secondary);
+}
