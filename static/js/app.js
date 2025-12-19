@@ -99,6 +99,13 @@ function handleDownloadCompleted(data) {
     }
 }
 
+function updateDownloadLog(id, logs) {
+    const pre = document.getElementById(`log-${id}`);
+    if (!pre) return;
+
+    pre.textContent = logs.join('\n');
+    pre.scrollTop = pre.scrollHeight;
+}
 
 
 
@@ -132,12 +139,23 @@ function renderActiveDownloads() {
                     <div class="download-title">${d.metadata.title || 'Unknown'}</div>
                     <div class="download-artist">${d.metadata.artist || ''}</div>
                     <span class="status-badge ${d.status}">${d.status}</span>
+
+                    <button class="toggle-log-btn"
+                            onclick="document.getElementById('log-wrap-${d.id}').classList.toggle('visible')">
+                        SHOW LOG
+                    </button>
                 </div>
+
                 <div class="download-spinner"></div>
+            </div>
+
+            <div class="download-log" id="log-wrap-${d.id}">
+                <pre id="log-${d.id}">${(d.logs || []).join('\n')}</pre>
             </div>
         </div>
     `).join('');
 }
+
 
 /* ===============================
    SEARCH
