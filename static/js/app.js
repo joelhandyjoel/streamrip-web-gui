@@ -373,40 +373,67 @@ async function loadFiles() {
         }
 
         container.innerHTML = items.map(item => {
+
+            // =====================
+            // ALBUM (FOLDER)
+            // =====================
             if (item.type === 'album') {
                 return `
-                    <div class="file-item">
-                        <div class="file-name file-album-header">
-                            <span onclick="this.parentElement.nextElementSibling.classList.toggle('hidden')">
+                    <div class="album-block">
+
+                        <div class="album-row">
+                            <div class="album-title"
+                                 onclick="this.parentElement.nextElementSibling.classList.toggle('hidden')">
                                 📁 ${item.name}
-                            </span>
-                            <button class="danger-btn" onclick="deleteFolder('${item.name}')">
-                                DELETE ALBUM
-                            </button>
+                            </div>
+
+                            <div class="album-actions">
+                                <button class="delete-album-btn"
+                                        onclick="deleteFolder('${item.name}')">
+                                    DELETE ALBUM
+                                </button>
+                            </div>
                         </div>
-            
-                        <div class="file-tracks hidden">
+
+                        <div class="album-tracks hidden">
                             ${item.tracks.map(t => `
-                                <div class="file-track">
-                                    <span>${t.name}</span>
-                                    <button onclick="deleteFile('${t.path}')">DELETE</button>
+                                <div class="file-row">
+                                    <div class="file-name">
+                                        ${t.name}
+                                    </div>
+
+                                    <div class="file-actions">
+                                        <button class="file-delete-btn"
+                                                onclick="deleteFile('${t.path}')">
+                                            DELETE
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
+
                     </div>
                 `;
             }
 
-
-            // Loose file
+            // =====================
+            // LOOSE FILE
+            // =====================
             return `
-                <div class="file-item">
+                <div class="file-row">
                     <div class="file-name">
                         ${item.name}
                     </div>
-                    <button onclick="deleteFile('${item.path}')">DELETE</button>
+
+                    <div class="file-actions">
+                        <button class="file-delete-btn"
+                                onclick="deleteFile('${item.path}')">
+                            DELETE
+                        </button>
+                    </div>
                 </div>
             `;
+
         }).join('');
 
     } catch (err) {
