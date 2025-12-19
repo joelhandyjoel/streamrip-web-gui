@@ -375,13 +375,25 @@ function renderDownloadHistory() {
 function switchTab(tab) {
     currentTab = tab;
 
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t =>
+        t.classList.remove('active')
+    );
     document.getElementById(`${tab}Tab`).classList.add('active');
 
-    if (tab === 'active') renderActiveDownloads();
-    if (tab === 'config') loadConfig();
-    if (tab === 'files') loadFiles();
+    if (tab === 'active') {
+        renderActiveDownloads();
+    }
+
+    if (tab === 'history') {
+        fetch('/api/history')
+            .then(r => r.json())
+            .then(data => {
+                downloadHistory = data || [];
+                renderDownloadHistory();
+            });
+    }
 }
+
 
 /* ===============================
    INIT
