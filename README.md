@@ -54,20 +54,30 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
 1: Add this to your `docker-compose.yml`
 
 ```
-streamrip:
-    build: .
-    image: joelhandyjoel/streamrip-web-gui:latest
+version: "3.8"
+
+services:
+  streamrip:
     container_name: streamrip-web
+
+    build:
+      context: .
+      dockerfile: Dockerfile
 
     environment:
       PUID: 1000
-      PGID: 1000
+      PGID: 1001
+
       STREAMRIP_CONFIG_DIR: /config
       STREAMRIP_DOWNLOAD_DIR: /music
       MAX_CONCURRENT_DOWNLOADS: 1
 
+      HOME: /config
+      XDG_CONFIG_HOME: /config
+      STREAMRIP_CONFIG: /config/streamrip/config.toml
+
     volumes:
-      - /mnt/docker/streamrip:/config
+      - /mnt/docker/streamrip:/config/streamrip
       - /mnt/media/Music:/music
 
     ports:
@@ -94,19 +104,26 @@ version: "3.8"
 
 services:
   streamrip:
-    build: .
-    image: joelhandyjoel/streamrip-web-gui:latest
     container_name: streamrip-web
+
+    build:
+      context: .
+      dockerfile: Dockerfile
 
     environment:
       PUID: 1000
-      PGID: 1000
+      PGID: 1001
+
       STREAMRIP_CONFIG_DIR: /config
       STREAMRIP_DOWNLOAD_DIR: /music
       MAX_CONCURRENT_DOWNLOADS: 1
 
+      HOME: /config
+      XDG_CONFIG_HOME: /config
+      STREAMRIP_CONFIG: /config/streamrip/config.toml
+
     volumes:
-      - /mnt/docker/streamrip:/config
+      - /mnt/docker/streamrip:/config/streamrip
       - /mnt/media/Music:/music
 
     ports:
@@ -200,6 +217,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
