@@ -1,5 +1,11 @@
 ![streamrip web interface](https://github.com/AnOddName/streamrip-web-gui/blob/main/demo/home_screen.png?raw=true)
 
+
+<img width="1192" height="742" alt="image" src="https://github.com/user-attachments/assets/8f478406-2569-47c2-8513-8c42203e7254" />
+
+
+
+
 # Streamrip Web GUI
 
 A web interface for [Streamrip](https://github.com/nathom/streamrip), providing a GUI for downloading music from various streaming services. 
@@ -196,6 +202,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
