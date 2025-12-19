@@ -812,42 +812,32 @@ def api_quality():
 
     source = data.get('source')
     media_type = data.get('type')
-    item_id = data.get('id')
+    track_id = data.get('id')
 
-    if source != 'qobuz' or media_type != 'track' or not item_id:
-        return jsonify({
-            'error': 'Only Qobuz track quality is supported'
-        }), 400
+    if source != 'qobuz' or media_type != 'track' or not track_id:
+        return jsonify({'error': 'Only Qobuz track quality is supported'}), 400
 
     try:
-        cmd = [
-            'rip',
-            '--no-db',
-            '-vv',
-            'url',
-            'qobuz',
-            'track',
-            f'https://open.qobuz.com/track/{item_id}'
-        ]
+        import asyncio
+        from streamrip.config import Config
+        from streamrip.clients.qobuz import QobuzClient
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        async def run():
+            config = Config(STREAMRIP_CONFIG)
+            client = QobuzClient(config)
 
-        quality = parse_quality_from_output(result.stdout)
+            # satisfy abstract base class (we don't need these)
+            client.search = lambda *a, **k: None
+            client.get_metadata = lambda *a, **k: None
 
-        return jsonify({
-            'id': item_id,
-            'quality': quality
-        })
+            await client.login()
+            return await client.inspect_track_quality(track_id, 4)
 
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Quality inspection timed out'}), 504
+        result = asyncio.run(run())
+        return jsonify(result)
+
     except Exception as e:
-        logger.exception('Quality inspection failed')
+        logger.exception("Quality inspection failed")
         return jsonify({'error': str(e)}), 500
 
 def parse_quality_from_output(output: str):
