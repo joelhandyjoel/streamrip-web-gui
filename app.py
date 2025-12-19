@@ -229,6 +229,26 @@ def api_delete_file():
         return jsonify({"error": str(e)}), 500
 
 
+def qobuz_file_exists(media_type, media_id):
+    base = DOWNLOAD_DIR
+
+    if media_type == "album":
+        # Albums are folders
+        for root, dirs, _ in os.walk(base):
+            for d in dirs:
+                if media_id in d:
+                    return True
+        return False
+
+    if media_type == "track":
+        # Tracks are files
+        for root, _, files in os.walk(base):
+            for f in files:
+                if media_id in f:
+                    return True
+        return False
+
+    return False
 
 
 def is_downloaded_qobuz(media_type, media_id):
@@ -262,16 +282,22 @@ def is_downloaded_qobuz(media_type, media_id):
 @app.route("/api/is-downloaded", methods=["POST"])
 def api_is_downloaded():
     data = request.json or {}
+
     source = data.get("source")
     media_type = data.get("type")
     media_id = data.get("id")
 
     if source != "qobuz" or not media_id:
-        return jsonify({"downloaded": False})
+        return jsonify({
+            "downloaded": False,
+            "file_exists": False
+        })
 
     return jsonify({
-        "downloaded": is_downloaded_qobuz(media_type, media_id)
+        "downloaded": is_downloaded_qobuz(media_type, media_id),
+        "file_exists": qobuz_file_exists(media_type, media_id)
     })
+
 
 
 
