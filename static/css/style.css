@@ -597,6 +597,12 @@ button:disabled {
     flex-shrink: 0;
 }
 
+.result-download-btn.downloaded {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none; /* 🔑 THIS */
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
     width: 8px;
