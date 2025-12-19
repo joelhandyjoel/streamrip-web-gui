@@ -413,6 +413,18 @@ def remove_tracks_from_db(track_ids, source="qobuz"):
     conn.commit()
     conn.close()
 
+def remove_track_from_db(track_id):
+    if not os.path.exists(DOWNLOADS_DB):
+        return
+
+    try:
+        conn = sqlite3.connect(DOWNLOADS_DB)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM tracks WHERE track_id = ?", (str(track_id),))
+        conn.commit()
+    finally:
+        conn.close()
+
 
 # ------------------------------------------------------------------------------
 # Qobuz helpers
