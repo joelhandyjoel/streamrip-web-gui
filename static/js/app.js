@@ -238,20 +238,17 @@ function applyQuality(id, data) {
     // reset state
     el.classList.remove('loading', 'hires', 'cd', 'lossy', 'unknown');
 
-    if (!data || !data.quality) {
+    const q = data?.quality;
+
+    if (!q || (!q.bit_depth && !q.sample_rate)) {
         el.textContent = 'Unknown';
         el.classList.add('unknown');
         return;
     }
 
-    const q = data.quality;
-
     // Prefer backend-generated label
-    el.textContent =
-        q.label ||
-        (q.bit_depth && q.sample_rate
-            ? `${q.bit_depth}-bit / ${q.sample_rate} kHz`
-            : 'Unknown');
+    el.textContent = q.label
+        || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
 
     if (q.hires || q.bit_depth > 16) {
         el.classList.add('hires');
