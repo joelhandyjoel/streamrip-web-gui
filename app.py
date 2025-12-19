@@ -161,6 +161,7 @@ def api_download():
     data = request.json or {}
     url = data.get("url")
     quality = data.get("quality", 3)
+    metadata = data.get("metadata", {})
 
     if not url:
         return jsonify({"error": "URL required"}), 400
@@ -170,14 +171,16 @@ def api_download():
         "id": task_id,
         "url": url,
         "quality": quality,
-        "metadata": {},
+        "metadata": metadata,   # ✅ KEEP METADATA
     })
 
     return jsonify({"task_id": task_id, "status": "queued"})
 
+
 @app.route("/api/download-from-url", methods=["POST"])
 def api_download_from_url():
     return api_download()
+
 
 @app.route("/api/history", methods=["GET"])
 def api_history():
