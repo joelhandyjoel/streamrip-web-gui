@@ -414,6 +414,33 @@ async function loadFiles() {
     }
 }
 
+
+async function deleteFolder(path) {
+    if (!confirm(`Delete entire album:\n\n${path}\n\nThis cannot be undone.`)) return;
+
+    const res = await fetch('/api/delete-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        alert(data.error || 'Failed to delete folder');
+        return;
+    }
+
+    loadFiles(); // refresh list
+}
+
+
+
+
+
+
+
+
 async function deleteFile(path) {
     if (!confirm(`Delete ${path}?`)) return;
 
