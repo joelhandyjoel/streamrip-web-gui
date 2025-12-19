@@ -809,32 +809,41 @@ def fetch_deezer_metadata(item_id, item_type):
 @app.route('/api/quality', methods=['POST'])
 def api_quality():
     data = request.json or {}
-    item_id = data.get('id')
 
-    if not item_id:
+    if data.get('source') != 'qobuz' or data.get('type') != 'track':
+        return jsonify({'supported': False})
+
+    track_id = data.get('id')
+    if not track_id:
         return jsonify({'error': 'Missing track id'}), 400
 
-    cmd = [
-        'rip',
-        '-vv',
-        '--no-progress',
-        'url',
-        f'https://open.qobuz.com/track/{item_id}'
-    ]
+    try:
+        cmd = [
+            'rip',
+            '-vv',
+            'url',
+            f'https://open.qobuz.com/track/{track_id}'
+        ]
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=30
-    )
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=20
+        )
 
-    quality = parse_qobuz_quality(result.stdout)
+        quality = parse_qobuz_quality(result.stdout)
 
-    return jsonify({
-        'id': item_id,
-        'quality': quality
-    })
+        return jsonify({
+            'id': track_id,
+            'quality': quality
+        })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Timeout'}), 504
+    except Exception as e:
+        logger.exception("Quality inspection failed")
+        return jsonify({'error': str(e)}), 500
 
 
 
@@ -843,31 +852,29 @@ def api_quality():
 def parse_qobuz_quality(output: str):
     import re
 
-    results = []
+    format_ids = set(
+        int(m.group(1))
+        for m in re.finditer(r'format_id=(\d+)', output)
+    )
 
-    for match in re.finditer(
-        r'format_id=(\d+).*?bit_depth=(\d+).*?sampling_rate=([\d.]+)',
-        output
-    ):
-        fmt, depth, rate = match.groups()
-        results.append({
-            'format_id': int(fmt),
-            'bit_depth': int(depth),
-            'sample_rate': float(rate)
-        })
-
-    if not results:
+    if not format_ids:
         return {'available': False}
 
-    # Highest format_id == best quality
-    best = max(results, key=lambda r: r['format_id'])
+    best = max(format_ids)
+
+    quality_map = {
+        5:  {'label': 'MP3 320'},
+        6:  {'label': 'FLAC 16-bit / 44.1 kHz'},
+        7:  {'label': 'FLAC 24-bit'},
+        27: {'label': 'FLAC 24-bit Hi-Res'},
+    }
 
     return {
         'available': True,
-        'best': best,
-        'all': results
+        'best_format_id': best,
+        'best': quality_map.get(best, {'label': 'Unknown'}),
+        'all_format_ids': sorted(format_ids)
     }
-
 
 
 
