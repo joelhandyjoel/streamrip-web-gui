@@ -133,10 +133,11 @@ class DownloadWorker(threading.Thread):
                 broadcast_sse({
                     "type": "download_completed",
                     "id": task_id,
-                    "status": status,
+                    "status": "completed" if proc.returncode == 0 else "failed",
                     "output": "\n".join(output),
                     "metadata": metadata,
                 })
+
 
             except Exception as e:
                 broadcast_sse({
