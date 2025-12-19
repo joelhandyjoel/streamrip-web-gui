@@ -179,6 +179,12 @@ def api_download():
 def api_download_from_url():
     return api_download()
 
+@app.route("/api/history", methods=["GET"])
+def api_history():
+    return jsonify(download_history)
+
+
+
 @app.route("/api/search", methods=["POST"])
 def api_search():
     data = request.json or {}
