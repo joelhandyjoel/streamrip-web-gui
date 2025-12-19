@@ -382,17 +382,26 @@ def api_album_art():
 @app.route("/api/config", methods=["GET"])
 def api_config():
     try:
-        if not os.path.exists(STREAMRIP_CONFIG):
-            return jsonify({"config": "", "path": STREAMRIP_CONFIG})
+        config_path = STREAMRIP_CONFIG
 
-        with open(STREAMRIP_CONFIG, "r") as f:
+        if not os.path.exists(config_path):
+            return jsonify({
+                "config": "",
+                "path": config_path
+            })
+
+        with open(config_path, "r") as f:
             return jsonify({
                 "config": f.read(),
-                "path": STREAMRIP_CONFIG
+                "path": config_path
             })
+
     except Exception:
         logger.exception("config error")
-        return jsonify({"config": "", "path": STREAMRIP_CONFIG})
+        return jsonify({
+            "config": "",
+            "path": STREAMRIP_CONFIG
+        })
 
 @app.route("/api/files", methods=["GET"])
 def api_files():
