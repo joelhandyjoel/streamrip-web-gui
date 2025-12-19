@@ -926,3 +926,20 @@ button:disabled {
     color: #000;
 }
 
+.album-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+}
+
+.album-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
