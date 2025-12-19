@@ -819,12 +819,14 @@ def api_quality():
 
     try:
         cmd = [
-            "rip",
-            "--config-path", STREAMRIP_CONFIG,
-            "-vv",
-            "url",
-            f"https://open.qobuz.com/track/{track_id}"
-        ]
+                "rip",
+                "--config-path", STREAMRIP_CONFIG,
+                "--db-path", "/tmp/streamrip-quality.db",
+                "-vv",
+                "url",
+                f"https://open.qobuz.com/track/{track_id}"
+            ]
+
 
         result = subprocess.run(
             cmd,
