@@ -70,18 +70,20 @@ function handleDownloadProgress(data) {
 }
 
 function handleDownloadCompleted(data) {
-    const d = activeDownloads.get(data.id);
-    if (!d) return;
+    activeDownloads.delete(data.id);
 
-    d.status = data.status;
-    d.output = data.output;
+    downloadHistory.unshift({
+        id: data.id,
+        status: data.status,
+        output: data.output,
+        metadata: data.metadata,
+        completedAt: data.completed_at
+    });
 
-    setTimeout(() => {
-        downloadHistory.unshift(d);
-        activeDownloads.delete(data.id);
-        if (currentTab === 'active') renderActiveDownloads();
-    }, 2000);
+    if (currentTab === 'active') renderActiveDownloads();
+    if (currentTab === 'history') renderDownloadHistory();
 }
+
 
 function handleDownloadError(data) {
     const d = activeDownloads.get(data.id);
