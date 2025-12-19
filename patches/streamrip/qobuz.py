@@ -232,6 +232,12 @@ class QobuzClient(Client):
                     }
                 )
 
+        logger.warning(
+            "QUALITY INSPECTION for track %s: %s",
+            track_id,
+            results
+        )
+        
         return {"track_id": track_id, "results": results}
 
     async def _request_file_url(
