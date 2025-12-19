@@ -69,6 +69,29 @@ active_downloads = {}
 download_history = []
 sse_clients = []
 
+
+@app.before_request
+def enforce_auth():
+    if not AUTH_ENABLED:
+        return
+
+    # Allow static files
+    if request.path.startswith("/static"):
+        return
+
+    # Allow SSE (EventSource does not send auth headers reliably)
+    if request.path == "/api/events":
+        return
+
+    auth = request.authorization
+    if not auth or auth.username != AUTH_USER or auth.password != AUTH_PASS:
+        return Response(
+            "Authentication required",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Streamrip"'},
+        )
+
+
 # ------------------------------------------------------------------------------
 # SSE helpers
 # ------------------------------------------------------------------------------
@@ -191,7 +214,6 @@ for _ in range(MAX_CONCURRENT_DOWNLOADS):
 # UI
 # ------------------------------------------------------------------------------
 @app.route("/")
-@require_auth
 def index():
     return render_template("index.html")
 
@@ -199,7 +221,6 @@ def index():
 # Downloads
 # ------------------------------------------------------------------------------
 @app.route("/api/download", methods=["POST"])
-@require_auth
 def api_download():
     data = request.json or {}
     url = data.get("url")
@@ -221,7 +242,6 @@ def api_download():
 
 
 @app.route("/api/download-from-url", methods=["POST"])
-@require_auth
 def api_download_from_url():
     return api_download()
 
@@ -234,7 +254,6 @@ def api_history():
 # Delete files / folders
 # ------------------------------------------------------------------------------
 @app.route("/api/delete-file", methods=["POST"])
-@require_auth
 def api_delete_file():
     data = request.json or {}
     path = data.get("path")
@@ -260,7 +279,6 @@ def api_delete_file():
 
 
 @app.route("/api/delete-folder", methods=["POST"])
-@require_auth
 def api_delete_folder():
     data = request.json or {}
     folder = data.get("path")
@@ -455,7 +473,6 @@ def api_album_art():
 # Config
 # ------------------------------------------------------------------------------
 @app.route("/api/config", methods=["GET"])
-@require_auth
 def api_config():
     if not os.path.exists(STREAMRIP_CONFIG):
         return jsonify({"config": ""})
