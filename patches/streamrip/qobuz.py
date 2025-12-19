@@ -19,7 +19,7 @@ from ..exceptions import (
     NonStreamableError,
 )
 from streamrip.client.client import Client
-from .downloadable import BasicDownloadable, Downloadable
+from streamrip.client.downloadable import BasicDownloadable, Downloadable
 
 logger = logging.getLogger("streamrip")
 
