@@ -810,42 +810,64 @@ def fetch_deezer_metadata(item_id, item_type):
 def api_quality():
     data = request.json or {}
 
-    if data.get('source') != 'qobuz' or data.get('type') != 'track':
-        return jsonify({'quality': None})
+    if data.get("source") != "qobuz" or data.get("type") != "track":
+        return jsonify({"quality": None})
 
-    track_id = data.get('id')
+    track_id = data.get("id")
     if not track_id:
-        return jsonify({'quality': None})
+        return jsonify({"quality": None})
 
     try:
-        cmd = [
-                "rip",
-                "--config-path", STREAMRIP_CONFIG,
-                "--overwrite",
-                "-vv",
-                "url",
-                f"https://open.qobuz.com/track/{item_id}"
-            ]
+        # Load config
+        with open(STREAMRIP_CONFIG, "r") as f:
+            cfg = f.read()
 
+        user_id = re.search(r'user_id\s*=\s*"([^"]+)"', cfg).group(1)
+        token = re.search(r'user_auth_token\s*=\s*"([^"]+)"', cfg).group(1)
+        app_id = re.search(r'app_id\s*=\s*"([^"]+)"', cfg).group(1)
 
+        # Qobuz format IDs (highest first)
+        formats = [
+            (27, "FLAC 24/192"),
+            (25, "FLAC 24/96"),
+            (24, "FLAC 24/48"),
+            (7,  "FLAC 16/44.1"),
+            (5,  "MP3 320")
+        ]
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        for fmt_id, label in formats:
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/track/getFileUrl",
+                params={
+                    "track_id": track_id,
+                    "format_id": fmt_id,
+                    "intent": "stream",
+                    "app_id": app_id,
+                    "user_id": user_id,
+                    "user_auth_token": token,
+                },
+                timeout=5
+            )
 
-        quality = parse_quality_from_streamrip(result.stdout)
+            if r.status_code == 200:
+                j = r.json()
+                if "bit_depth" in j:
+                    return jsonify({
+                        "quality": {
+                            "max": {
+                                "bit_depth": j["bit_depth"],
+                                "sample_rate": j["sampling_rate"] * 1000,
+                                "format": label
+                            }
+                        }
+                    })
 
-        return jsonify({
-            "id": track_id,
-            "quality": quality
-        })
+        return jsonify({"quality": None})
 
     except Exception as e:
-        logger.exception("Quality inspection failed")
+        logger.exception("Quality lookup failed")
         return jsonify({"quality": None})
+
 
 def parse_quality_from_streamrip(output: str):
     import re
