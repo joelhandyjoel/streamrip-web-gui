@@ -220,26 +220,25 @@ def api_search():
 def api_quality():
     data = request.json or {}
 
-    if data.get("source") != "qobuz":
+    if data.get("source") != "qobuz" or data.get("type") != "track":
         return jsonify({"quality": None})
 
-    item_id = data.get("id")
-    item_type = data.get("type")
-
-    if not item_id or item_type not in ("track", "album"):
+    track_id = data.get("id")
+    if not track_id:
         return jsonify({"quality": None})
 
     try:
         app_id = get_qobuz_app_id()
-        api_base = "https://www.qobuz.com/api.json/0.2"
 
-        endpoint = "track/get" if item_type == "track" else "album/get"
-        params = {
-            f"{item_type}_id": item_id,
-            "app_id": app_id
-        }
+        r = requests.get(
+            "https://www.qobuz.com/api.json/0.2/track/get",
+            params={
+                "track_id": track_id,
+                "app_id": app_id
+            },
+            timeout=5
+        )
 
-        r = requests.get(f"{api_base}/{endpoint}", params=params, timeout=5)
         if r.status_code != 200:
             return jsonify({"quality": None})
 
@@ -250,14 +249,15 @@ def api_quality():
             "sample_rate": data.get("maximum_sampling_rate"),
             "channels": data.get("maximum_channel_count"),
             "hires": data.get("hires"),
-            "label": data.get("maximum_technical_specifications")
+            "label": data.get("maximum_technical_specifications"),
         }
 
         return jsonify({"quality": quality})
 
     except Exception as e:
-        logger.exception("quality lookup failed")
+        logger.exception("quality error")
         return jsonify({"quality": None})
+
 
 
 # ------------------------------------------------------------------------------
