@@ -217,7 +217,9 @@ function changePage(dir) {
 ================================ */
 
 async function fetchTrackQuality(trackId) {
-    if (qualityCache.has(trackId)) return qualityCache.get(trackId);
+    if (qualityCache.has(trackId)) {
+        return qualityCache.get(trackId);
+    }
 
     const res = await fetch('/api/quality', {
         method: 'POST',
@@ -240,15 +242,22 @@ function applyQuality(trackId, data) {
 
     el.classList.remove('loading');
 
-    if (!data?.quality?.max) {
+    if (!data || !data.quality) {
         el.textContent = 'Unknown';
         el.classList.add('unknown');
         return;
     }
 
-    const q = data.quality.max;
-    el.textContent = `${q.bit_depth}-bit / ${q.sample_rate / 1000}kHz`;
-    el.classList.add(q.bit_depth > 16 ? 'hires' : 'cd');
+    const q = data.quality;
+
+    // Use server-generated label (best!)
+    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
+
+    if (q.hires || q.bit_depth > 16) {
+        el.classList.add('hires');
+    } else {
+        el.classList.add('cd');
+    }
 }
 
 function inspectVisibleTrackQuality() {
