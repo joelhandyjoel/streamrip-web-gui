@@ -10,23 +10,26 @@ import re
 import requests
 import shutil
 import sqlite3
+import wraps
 
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
-AUTH_USER = os.environ.get("STREAMRIP_USER")
-AUTH_PASS = os.environ.get("STREAMRIP_PASS")
+STREAMRIP_USER = os.environ.get("STREAMRIP_USER")
+STREAMRIP_PASS = os.environ.get("STREAMRIP_PASS")
 
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or auth.username != AUTH_USER or auth.password != AUTH_PASS:
+
+        if not auth or auth.username != STREAMRIP_USER or auth.password != STREAMRIP_PASS:
             return Response(
                 "Authentication required",
                 401,
-                {"WWW-Authenticate": 'Basic realm="Streamrip"'}
+                {"WWW-Authenticate": 'Basic realm="Streamrip Web"'}
             )
+
         return f(*args, **kwargs)
     return decorated
 
@@ -181,6 +184,7 @@ for _ in range(MAX_CONCURRENT_DOWNLOADS):
 # Routes
 # ------------------------------------------------------------------------------
 @app.route("/")
+@require_auth
 def index():
     return render_template("index.html")
 
