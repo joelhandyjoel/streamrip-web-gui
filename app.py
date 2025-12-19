@@ -16,8 +16,8 @@ from flask import Flask, render_template, request, jsonify, Response, stream_wit
 from functools import wraps
 
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
-STREAMRIP_USER = os.environ.get("STREAMRIP_USER", "")
-STREAMRIP_PASS = os.environ.get("STREAMRIP_PASS", "")
+AUTH_USER = os.environ.get("AUTH_USER", "")
+AUTH_PASS = os.environ.get("AUTH_PASS", "")
 
 def require_auth(fn):
     @wraps(fn)
