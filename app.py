@@ -175,6 +175,12 @@ def api_download():
 
     return jsonify({"task_id": task_id, "status": "queued"})
 
+@app.route("/api/download-from-url", methods=["POST"])
+def api_download_from_url():
+    # Compatibility shim for frontend
+    return api_download()
+
+
 @app.route("/api/search", methods=["POST"])
 def api_search():
     data = request.json or {}
@@ -363,7 +369,17 @@ def api_album_art():
         logger.exception("album art error")
         return jsonify({"album_art": ""})
 
+@app.route("/api/config", methods=["GET"])
+def api_config():
+    try:
+        if not os.path.exists(STREAMRIP_CONFIG):
+            return jsonify({"config": ""})
 
+        with open(STREAMRIP_CONFIG, "r") as f:
+            return jsonify({"config": f.read()})
+    except Exception as e:
+        logger.exception("config error")
+        return jsonify({"config": ""})
 
 
 
