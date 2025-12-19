@@ -317,7 +317,7 @@ def api_album_art():
     media_type = request.args.get("type")
     item_id = request.args.get("id")
 
-    logger.info(f"ALBUM ART: {source} {media_type} {item_id}")
+    logger.info(f"ALBUM ART HIT: {source} {media_type} {item_id}")
 
     if source != "qobuz" or not item_id:
         return jsonify({"album_art": ""})
@@ -332,11 +332,7 @@ def api_album_art():
                 timeout=5
             )
             data = r.json()
-            art = (
-                data.get("album", {})
-                    .get("image", {})
-                    .get("large")
-            )
+            art = data.get("album", {}).get("image", {}).get("large")
             return jsonify({"album_art": art or ""})
 
         if media_type == "album":
