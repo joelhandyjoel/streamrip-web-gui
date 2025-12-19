@@ -283,7 +283,8 @@ function applyQuality(id, data) {
     const el = document.getElementById(`quality-${id}`);
     if (!el) return;
 
-    el.classList.remove('loading', 'hires', 'cd', 'unknown');
+    // reset state
+    el.classList.remove('loading', 'hires', 'cd', 'ultra', 'unknown');
 
     if (!data || !data.quality || !data.quality.bit_depth) {
         el.textContent = 'Unknown';
@@ -292,9 +293,27 @@ function applyQuality(id, data) {
     }
 
     const q = data.quality;
-    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
-    el.classList.add(q.hires || q.bit_depth > 16 ? 'hires' : 'cd');
+
+    // Label (prefer backend label if present)
+    el.textContent =
+        q.label ||
+        `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
+
+    // 🎯 Tier logic
+    if (q.bit_depth >= 24 && q.sample_rate >= 88.2) {
+        // TRUE high-res masters (88.2 / 96 / 176.4 / 192)
+        el.classList.add('ultra');
+    } else if (q.bit_depth >= 24) {
+        // 24-bit but base rate (44.1 / 48)
+        el.classList.add('hires');
+    } else if (q.bit_depth === 16) {
+        // CD quality
+        el.classList.add('cd');
+    } else {
+        el.classList.add('unknown');
+    }
 }
+
 
 function inspectVisibleMediaQuality() {
     document.querySelectorAll('.search-result-item').forEach(async el => {
