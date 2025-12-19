@@ -14,6 +14,9 @@ let activeDownloads = new Map();
 let downloadHistory = [];
 
 const qualityCache = new Map();
+const downloadedCache = new Map();
+
+
 
 /* ===============================
    SSE
@@ -231,16 +234,39 @@ function displayCurrentPage() {
             </div>
 
             <button class="result-download-btn"
-                onclick="downloadFromUrl('${r.url}')">
-                DOWNLOAD
-            </button>
+              id="download-btn-${r.id}"
+              onclick="downloadFromUrl('${r.url}')">
+          DOWNLOAD
+      </button>
         </div>
     `).join('');
-
+   
+    inspectDownloadedState();
     updatePaginationControls();
     loadAlbumArtForVisibleItems();
     inspectVisibleMediaQuality();
 }
+
+function inspectDownloadedState() {
+    document.querySelectorAll('.search-result-item').forEach(async el => {
+        const { source, type, id } = el.dataset;
+
+        if (source !== 'qobuz') return;
+
+        const downloaded = await fetchDownloadedState(source, type, id);
+
+        if (downloaded) {
+            const btn = document.getElementById(`download-btn-${id}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'DOWNLOADED';
+                btn.classList.add('downloaded');
+            }
+        }
+    });
+}
+
+
 
 /* ===============================
    PAGINATION
@@ -344,6 +370,31 @@ async function loadAlbumArtForVisibleItems() {
         }
     });
 }
+
+
+async function fetchDownloadedState(source, type, id) {
+    const key = `${source}:${type}:${id}`;
+    if (downloadedCache.has(key)) {
+        return downloadedCache.get(key);
+    }
+
+    const res = await fetch('/api/is-downloaded', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, type, id })
+    });
+
+    const data = await res.json();
+    downloadedCache.set(key, data.downloaded);
+    return data.downloaded;
+}
+
+
+
+
+
+
+
 
 /* ===============================
    DOWNLOAD
