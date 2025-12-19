@@ -809,38 +809,66 @@ def fetch_deezer_metadata(item_id, item_type):
 @app.route('/api/quality', methods=['POST'])
 def api_quality():
     data = request.json or {}
+    item_id = data.get('id')
 
-    source = data.get('source')
-    media_type = data.get('type')
-    track_id = data.get('id')
+    if not item_id:
+        return jsonify({'error': 'Missing track id'}), 400
 
-    if source != 'qobuz' or media_type != 'track' or not track_id:
-        return jsonify({'error': 'Only Qobuz track quality is supported'}), 400
+    cmd = [
+        'rip',
+        '-vv',
+        '--no-progress',
+        'url',
+        f'https://open.qobuz.com/track/{item_id}'
+    ]
 
-    try:
-        import asyncio
-        from streamrip.config import Config
-        from streamrip.clients.qobuz import QobuzClient
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=30
+    )
 
-        class QualityQobuzClient(QobuzClient):
-            async def search(self, *args, **kwargs):
-                raise NotImplementedError
+    quality = parse_qobuz_quality(result.stdout)
 
-            async def get_metadata(self, *args, **kwargs):
-                raise NotImplementedError
+    return jsonify({
+        'id': item_id,
+        'quality': quality
+    })
 
-        async def run():
-            config = Config(STREAMRIP_CONFIG)
-            client = QualityQobuzClient(config)
-            await client.login()
-            return await client.inspect_track_quality(track_id, 4)
 
-        result = asyncio.run(run())
-        return jsonify(result)
 
-    except Exception as e:
-        logger.exception("Quality inspection failed")
-        return jsonify({'error': str(e)}), 500
+
+
+def parse_qobuz_quality(output: str):
+    import re
+
+    results = []
+
+    for match in re.finditer(
+        r'format_id=(\d+).*?bit_depth=(\d+).*?sampling_rate=([\d.]+)',
+        output
+    ):
+        fmt, depth, rate = match.groups()
+        results.append({
+            'format_id': int(fmt),
+            'bit_depth': int(depth),
+            'sample_rate': float(rate)
+        })
+
+    if not results:
+        return {'available': False}
+
+    # Highest format_id == best quality
+    best = max(results, key=lambda r: r['format_id'])
+
+    return {
+        'available': True,
+        'best': best,
+        'all': results
+    }
+
+
 
 
 @app.route('/api/download-from-url', methods=['POST'])
