@@ -222,6 +222,37 @@ def api_search():
     return jsonify({"results": results})
 
 # ------------------------------------------------------------------------------
+# File browser
+# ------------------------------------------------------------------------------
+@app.route("/api/browse", methods=["GET"])
+def api_browse():
+    base = DOWNLOAD_DIR
+
+    if not os.path.exists(base):
+        return jsonify([])
+
+    files = []
+
+    for root, dirs, filenames in os.walk(base):
+        for name in filenames:
+            path = os.path.join(root, name)
+            try:
+                stat = os.stat(path)
+            except OSError:
+                continue
+
+            files.append({
+                "name": os.path.relpath(path, base),
+                "size": stat.st_size,
+                "modified": int(stat.st_mtime),
+            })
+
+    # newest first
+    files.sort(key=lambda x: x["modified"], reverse=True)
+    return jsonify(files)
+
+
+# ------------------------------------------------------------------------------
 # Qobuz helpers
 # ------------------------------------------------------------------------------
 def get_qobuz_app_id():
