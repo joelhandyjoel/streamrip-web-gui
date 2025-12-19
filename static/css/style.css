@@ -831,3 +831,56 @@ button:disabled {
         padding: 10px;
     }
 }
+
+
+
+/* ===============================
+   QUALITY BADGES (ADD-ON ONLY)
+   Safe to append — does not affect layout
+================================ */
+
+.quality-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-left: 8px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* Loading */
+.quality-badge.loading {
+    color: var(--text-tertiary);
+    border-color: var(--border);
+    animation: pulse 1.5s infinite;
+}
+
+/* CD quality */
+.quality-badge.cd {
+    color: var(--text-primary);
+    border-color: var(--text-tertiary);
+}
+
+/* Hi-Res */
+.quality-badge.hires {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+/* Unknown */
+.quality-badge.unknown {
+    color: var(--text-tertiary);
+    border-color: var(--border);
+}
+
+/* Error */
+.quality-badge.error {
+    color: var(--error);
+    border-color: var(--error);
+}
