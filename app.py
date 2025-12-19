@@ -34,10 +34,7 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-@app.route("/")
-@require_auth
-def index():
-    return render_template("index.html")
+
 
 
 # ------------------------------------------------------------------------------
@@ -189,7 +186,11 @@ for _ in range(MAX_CONCURRENT_DOWNLOADS):
 # ------------------------------------------------------------------------------
 # Routes
 # ------------------------------------------------------------------------------
-
+@app.route("/")
+@require_auth
+def index():
+    return render_template("index.html")
+    
 @app.route("/api/download", methods=["POST"])
 def api_download():
     data = request.json or {}
