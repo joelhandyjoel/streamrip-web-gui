@@ -822,8 +822,18 @@ def api_quality():
         client = QualityQobuzClient(config)
         await client.login()
 
+    async def run():
+    config = Config("/config/streamrip/config.toml")
+    client = QualityQobuzClient(config)
+
+        await client.login()
+    
+        # 🔑 PRIME SECRET (this is what you were missing)
+        await client.resolve_url(f"https://open.qobuz.com/track/{track_id}")
+    
         result = await client.inspect_track_quality(track_id, 4)
         return result
+
 
     try:
         result = asyncio.run(run())
