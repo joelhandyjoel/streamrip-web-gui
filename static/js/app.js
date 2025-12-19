@@ -339,6 +339,35 @@ async function loadFiles() {
     `).join('');
 }
 
+
+
+
+function renderDownloadHistory() {
+    const el = document.getElementById('downloadHistory');
+    if (!el) return;
+
+    if (!downloadHistory.length) {
+        el.innerHTML = `<div class="empty-state">NO DOWNLOAD HISTORY</div>`;
+        return;
+    }
+
+    el.innerHTML = downloadHistory.map(d => `
+        <div class="download-item completed">
+            <div class="download-content">
+                <div class="download-info">
+                    <div class="download-title">${d.metadata?.title || 'Unknown'}</div>
+                    <div class="download-artist">${d.metadata?.artist || ''}</div>
+                    <span class="status-badge completed">completed</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+
+
+
+
 /* ===============================
    TABS
 ================================ */
