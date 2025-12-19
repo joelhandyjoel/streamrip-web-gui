@@ -87,30 +87,18 @@ class DownloadWorker(threading.Thread):
             quality = task.get("quality", 3)
             metadata = task.get("metadata", {})
 
-            active_downloads[task_id] = {"status": "downloading", "metadata": metadata}
-            entry = {
+            # 🔥 MUST SEND download_started FIRST
+            active_downloads[task_id] = {
                 "id": task_id,
-                "status": status,
-                "output": "\n".join(output),
+                "status": "downloading",
                 "metadata": metadata,
             }
-            
-            # store history
-            download_history.append(entry)
-            
-            # notify UI (DO NOT spread blindly)
+
             broadcast_sse({
-                "type": "download_completed",
+                "type": "download_started",
                 "id": task_id,
-                "status": status,
-                "output": entry["output"],
                 "metadata": metadata,
             })
-
-    
-            # remove from active
-            active_downloads.pop(task_id, None)
-
 
             cmd = ["rip"]
             if os.path.exists(STREAMRIP_CONFIG):
@@ -130,16 +118,18 @@ class DownloadWorker(threading.Thread):
 
                 for line in proc.stdout:
                     output.append(line.rstrip())
-                    if len(output) % 10 == 0:
-                        broadcast_sse({
-                            "type": "download_progress",
-                            "id": task_id,
-                            "output": "\n".join(output[-5:]),
-                        })
+
+                    # progress events are OPTIONAL but fine
+                    broadcast_sse({
+                        "type": "download_progress",
+                        "id": task_id,
+                        "output": "\n".join(output[-5:]),
+                    })
 
                 proc.wait()
                 status = "completed" if proc.returncode == 0 else "failed"
 
+                # 🔥 SEND download_completed WITH SAME ID
                 broadcast_sse({
                     "type": "download_completed",
                     "id": task_id,
@@ -157,12 +147,8 @@ class DownloadWorker(threading.Thread):
 
             finally:
                 active_downloads.pop(task_id, None)
-                download_history.append({
-                    "id": task_id,
-                    "metadata": metadata,
-                    "output": "\n".join(output),
-                })
                 download_queue.task_done()
+
 
 for _ in range(MAX_CONCURRENT_DOWNLOADS):
     DownloadWorker().start()
