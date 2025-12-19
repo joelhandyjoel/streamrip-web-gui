@@ -310,6 +310,80 @@ def construct_url(source, media_type, item_id):
         return f"https://open.qobuz.com/{media_type}/{item_id}"
     return ""
 
+
+@app.route("/api/album-art", methods=["GET"])
+def api_album_art():
+    source = request.args.get("source")
+    media_type = request.args.get("type")
+    item_id = request.args.get("id")
+
+    if not source or not media_type or not item_id:
+        return jsonify({"album_art": ""})
+
+    try:
+        # -------------------------
+        # QOBUZ
+        # -------------------------
+        if source == "qobuz":
+            app_id = get_qobuz_app_id()
+
+            if media_type == "track":
+                r = requests.get(
+                    "https://www.qobuz.com/api.json/0.2/track/get",
+                    params={"track_id": item_id, "app_id": app_id},
+                    timeout=5,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    img = data.get("album", {}).get("image", {})
+                    return jsonify({
+                        "album_art": img.get("large") or img.get("medium") or ""
+                    })
+
+            if media_type == "album":
+                r = requests.get(
+                    "https://www.qobuz.com/api.json/0.2/album/get",
+                    params={"album_id": item_id, "app_id": app_id},
+                    timeout=5,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    img = data.get("image", {})
+                    return jsonify({
+                        "album_art": img.get("large") or img.get("medium") or ""
+                    })
+
+        # -------------------------
+        # DEEZER (easy mode)
+        # -------------------------
+        if source == "deezer":
+            if media_type == "track":
+                r = requests.get(f"https://api.deezer.com/track/{item_id}", timeout=5)
+                if r.status_code == 200:
+                    return jsonify({
+                        "album_art": r.json().get("album", {}).get("cover_medium", "")
+                    })
+
+            if media_type == "album":
+                return jsonify({
+                    "album_art": f"https://api.deezer.com/album/{item_id}/image"
+                })
+
+        # -------------------------
+        # TIDAL (static URLs)
+        # -------------------------
+        if source == "tidal":
+            return jsonify({
+                "album_art": f"https://resources.tidal.com/images/{item_id}/320x320.jpg"
+            })
+
+    except Exception as e:
+        logger.error(f"album art error: {e}")
+
+    return jsonify({"album_art": ""})
+
+
+
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
     logger.info("Starting Streamrip Web")
