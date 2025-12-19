@@ -26,13 +26,16 @@ RUN pip install --no-cache-dir \
     flask-cors \
     gunicorn \
     gevent \
-    requests
+    requests \
+    streamrip
 
 # ---- app files ----
 COPY app.py /app/
 COPY templates /app/templates/
 COPY static /app/static/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY patches/streamrip/qobuz.py \
+    /usr/local/lib/python3.11/site-packages/streamrip/clients/qobuz.py
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
