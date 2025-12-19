@@ -34,9 +34,7 @@ body {
     margin: 0 auto;
 }
 
-/* ===============================
-   HEADER
-================================ */
+/* ================= HEADER ================= */
 
 .header {
     border-bottom: 1px solid var(--border);
@@ -58,9 +56,7 @@ h1 {
     letter-spacing: 2px;
 }
 
-/* ===============================
-   INPUTS / BUTTONS
-================================ */
+/* ================= INPUTS ================= */
 
 .input-group {
     display: flex;
@@ -68,21 +64,7 @@ h1 {
     margin-bottom: 30px;
 }
 
-input[type="text"] {
-    flex: 1;
-    padding: 12px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 14px;
-}
-
-input[type="text"]:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
+input[type="text"],
 select {
     padding: 12px;
     background: var(--bg-primary);
@@ -90,7 +72,12 @@ select {
     color: var(--text-primary);
     font-family: inherit;
     font-size: 14px;
-    cursor: pointer;
+}
+
+input[type="text"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
 button {
@@ -103,6 +90,7 @@ button {
     letter-spacing: 1px;
     cursor: pointer;
     text-transform: uppercase;
+    transition: all 0.2s;
 }
 
 button:hover:not(:disabled) {
@@ -115,20 +103,19 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* ===============================
-   TABS
-================================ */
+/* ================= TABS ================= */
 
 .tabs {
     display: flex;
-    border-bottom: 1px solid var(--border);
     margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
 }
 
 .tab {
     padding: 15px 30px;
     background: transparent;
     border: none;
+    border-bottom: 2px solid transparent;
     color: var(--text-tertiary);
     cursor: pointer;
     font-size: 12px;
@@ -137,7 +124,7 @@ button:disabled {
 
 .tab.active {
     color: var(--text-primary);
-    border-bottom: 2px solid var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 .tab-content {
@@ -148,18 +135,16 @@ button:disabled {
     display: block;
 }
 
-/* ===============================
-   SEARCH RESULTS
-================================ */
+/* ================= SEARCH ================= */
 
 .search-result-item {
     display: flex;
     align-items: center;
+    gap: 20px;
     padding: 20px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
     margin-bottom: 8px;
-    gap: 20px;
 }
 
 .search-result-item:hover {
@@ -169,19 +154,19 @@ button:disabled {
 .result-album-art {
     width: 60px;
     height: 60px;
-    object-fit: cover;
     background: var(--bg-primary);
     border: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.result-album-art.placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-tertiary);
     font-size: 24px;
-    animation: pulse 2s infinite;
+}
+
+.result-album-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .result-info {
@@ -192,17 +177,18 @@ button:disabled {
 .result-service {
     display: inline-block;
     padding: 2px 8px;
+    font-size: 10px;
     border: 1px solid var(--text-tertiary);
     color: var(--text-tertiary);
-    font-size: 10px;
-    text-transform: uppercase;
     margin-bottom: 6px;
 }
 
 .result-title {
     font-size: 14px;
-    color: var(--text-primary);
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .result-artist {
@@ -213,114 +199,61 @@ button:disabled {
 .result-id {
     font-size: 10px;
     color: var(--text-tertiary);
-    margin-top: 4px;
 }
 
-/* ===============================
-   QUALITY BADGES (TRACK + ALBUM)
-================================ */
+/* ================= QUALITY BADGES ================= */
 
 .quality-badge {
     display: inline-block;
     padding: 2px 8px;
     font-size: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    text-transform: uppercase;
     border: 1px solid var(--border);
     color: var(--text-secondary);
-    background: var(--bg-primary);
-    margin-left: 6px;
+    margin-left: 8px;
 }
 
-/* loading */
 .quality-badge.loading {
-    color: var(--text-tertiary);
     animation: pulse 1.5s infinite;
 }
 
-/* CD */
 .quality-badge.cd {
     color: var(--text-primary);
     border-color: var(--text-tertiary);
 }
 
-/* Hi-Res */
 .quality-badge.hires {
     color: var(--success);
     border-color: var(--success);
 }
 
-/* Lossy */
-.quality-badge.lossy {
-    color: var(--warning);
-    border-color: var(--warning);
-}
-
-/* Unknown */
 .quality-badge.unknown {
     color: var(--text-tertiary);
+    border-color: var(--border);
 }
 
-/* Optional: album-level indicator */
+/* Album-specific (additive, safe) */
 .quality-badge.album {
-    opacity: 0.9;
+    opacity: 0.85;
 }
 
-/* ===============================
-   DOWNLOADS
-================================ */
+/* ================= DOWNLOAD ================= */
 
-.download-item {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border);
-    padding: 20px;
-    margin-bottom: 10px;
+.result-download-btn {
+    padding: 10px 20px;
+    font-size: 11px;
 }
 
-.download-item.downloading {
-    border-left: 3px solid var(--warning);
-}
-
-.download-item.completed {
-    border-left: 3px solid var(--success);
-}
-
-.download-item.failed {
-    border-left: 3px solid var(--error);
-}
-
-/* ===============================
-   EMPTY / STATES
-================================ */
+/* ================= EMPTY STATE ================= */
 
 .empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 60px;
     color: var(--text-tertiary);
     font-size: 12px;
     letter-spacing: 1px;
-    text-transform: uppercase;
 }
 
-/* ===============================
-   SCROLLBARS
-================================ */
-
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--text-tertiary);
-}
-
-/* ===============================
-   ANIMATIONS
-================================ */
+/* ================= ANIMATIONS ================= */
 
 @keyframes pulse {
     0% { opacity: 0.3; }
