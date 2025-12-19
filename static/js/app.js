@@ -472,21 +472,30 @@ async function loadFiles() {
 async function deleteFolder(path) {
     if (!confirm(`Delete entire album:\n\n${path}\n\nThis cannot be undone.`)) return;
 
-    const res = await fetch('/api/delete-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path })
-    });
+    document.querySelectorAll('.file-delete-btn, .delete-album-btn')
+        .forEach(b => b.disabled = true);
 
-    const data = await res.json();
+    try {
+        const res = await fetch('/api/delete-folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
 
-    if (!res.ok) {
-        alert(data.error || 'Failed to delete folder');
-        return;
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Failed to delete folder');
+            return;
+        }
+
+        await loadFiles();
+
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
     }
-
-    loadFiles(); // refresh list
 }
+
 
 
 
@@ -498,20 +507,31 @@ async function deleteFolder(path) {
 async function deleteFile(path) {
     if (!confirm(`Delete ${path}?`)) return;
 
-    const res = await fetch('/api/delete-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path })
-    });
+    // 🔒 disable all delete buttons
+    document.querySelectorAll('.file-delete-btn, .delete-album-btn')
+        .forEach(b => b.disabled = true);
 
-    if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || 'Delete failed');
-        return;
+    try {
+        const res = await fetch('/api/delete-file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            alert(data.error || 'Delete failed');
+            return;
+        }
+
+        // ✅ refresh file list
+        await loadFiles();
+
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
     }
-
-    loadFiles(); // refresh view
 }
+
 
 
 
