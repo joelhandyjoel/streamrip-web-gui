@@ -70,19 +70,25 @@ function handleDownloadProgress(data) {
 }
 
 function handleDownloadCompleted(data) {
+    console.log("DOWNLOAD COMPLETED EVENT:", data);
+
+    const d = activeDownloads.get(data.id);
+    if (!d) {
+        console.warn("Completed download not found in active:", data.id);
+        return;
+    }
+
+    d.status = data.status || 'completed';
+    d.output = data.output || '';
+
+    // move to history
+    downloadHistory.unshift(d);
     activeDownloads.delete(data.id);
 
-    downloadHistory.unshift({
-        id: data.id,
-        status: data.status,
-        output: data.output,
-        metadata: data.metadata,
-        completedAt: data.completed_at
-    });
-
-    if (currentTab === 'active') renderActiveDownloads();
-    if (currentTab === 'history') renderDownloadHistory();
+    renderActiveDownloads();
+    renderDownloadHistory();
 }
+
 
 
 function handleDownloadError(data) {
