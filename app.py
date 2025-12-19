@@ -88,11 +88,26 @@ class DownloadWorker(threading.Thread):
             metadata = task.get("metadata", {})
 
             active_downloads[task_id] = {"status": "downloading", "metadata": metadata}
-            broadcast_sse({
-                "type": "download_started",
+            entry = {
                 "id": task_id,
-                "metadata": metadata
+                "status": status,
+                "output": "\n".join(output),
+                "metadata": metadata,
+                "completed_at": time.time(),
+            }
+            
+            # store history FIRST
+            download_history.append(entry)
+            
+            # notify UI
+            broadcast_sse({
+                "type": "download_completed",
+                **entry,
             })
+            
+            # remove from active
+            active_downloads.pop(task_id, None)
+
 
             cmd = ["rip"]
             if os.path.exists(STREAMRIP_CONFIG):
