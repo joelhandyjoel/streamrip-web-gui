@@ -394,6 +394,25 @@ def api_config():
         logger.exception("config error")
         return jsonify({"config": "", "path": STREAMRIP_CONFIG})
 
+@app.route("/api/files", methods=["GET"])
+def api_files():
+    files = []
+
+    for root, _, filenames in os.walk(DOWNLOAD_DIR):
+        for name in filenames:
+            path = os.path.join(root, name)
+            rel = os.path.relpath(path, DOWNLOAD_DIR)
+
+            files.append({
+                "name": rel,
+                "size": os.path.getsize(path),
+                "mtime": os.path.getmtime(path),
+            })
+
+    files.sort(key=lambda x: x["mtime"], reverse=True)
+    return jsonify({"files": files})
+
+
 
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
