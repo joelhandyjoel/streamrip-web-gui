@@ -317,59 +317,44 @@ def api_album_art():
     media_type = request.args.get("type")
     item_id = request.args.get("id")
 
-    if not all([source, media_type, item_id]):
+    logger.info(f"ALBUM ART: {source} {media_type} {item_id}")
+
+    if source != "qobuz" or not item_id:
         return jsonify({"album_art": ""})
 
     try:
-        # ---- QOBUZ ----
-        if source == "qobuz":
-            app_id = get_qobuz_app_id()
+        app_id = get_qobuz_app_id()
 
-            if media_type == "track":
-                r = requests.get(
-                    "https://www.qobuz.com/api.json/0.2/track/get",
-                    params={
-                        "track_id": item_id,
-                        "app_id": app_id
-                    },
-                    timeout=5
-                )
+        if media_type == "track":
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/track/get",
+                params={"track_id": item_id, "app_id": app_id},
+                timeout=5
+            )
+            data = r.json()
+            art = (
+                data.get("album", {})
+                    .get("image", {})
+                    .get("large")
+            )
+            return jsonify({"album_art": art or ""})
 
-                if r.status_code != 200:
-                    return jsonify({"album_art": ""})
+        if media_type == "album":
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/album/get",
+                params={"album_id": item_id, "app_id": app_id},
+                timeout=5
+            )
+            data = r.json()
+            art = data.get("image", {}).get("large")
+            return jsonify({"album_art": art or ""})
 
-                data = r.json()
-                image = (
-                    data.get("album", {})
-                        .get("image", {})
-                        .get("large")
-                )
-
-                return jsonify({"album_art": image or ""})
-
-            elif media_type == "album":
-                r = requests.get(
-                    "https://www.qobuz.com/api.json/0.2/album/get",
-                    params={
-                        "album_id": item_id,
-                        "app_id": app_id
-                    },
-                    timeout=5
-                )
-
-                if r.status_code != 200:
-                    return jsonify({"album_art": ""})
-
-                data = r.json()
-                image = data.get("image", {}).get("large")
-                return jsonify({"album_art": image or ""})
-
-        # ---- FALLBACK ----
         return jsonify({"album_art": ""})
 
     except Exception:
-        logger.exception("album-art error")
+        logger.exception("album art error")
         return jsonify({"album_art": ""})
+
 
 
 
