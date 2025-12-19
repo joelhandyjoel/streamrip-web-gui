@@ -822,14 +822,16 @@ def api_quality():
         from streamrip.config import Config
         from streamrip.clients.qobuz import QobuzClient
 
+        class QualityQobuzClient(QobuzClient):
+            async def search(self, *args, **kwargs):
+                raise NotImplementedError
+
+            async def get_metadata(self, *args, **kwargs):
+                raise NotImplementedError
+
         async def run():
             config = Config(STREAMRIP_CONFIG)
-            client = QobuzClient(config)
-
-            # satisfy abstract base class (we don't need these)
-            client.search = lambda *a, **k: None
-            client.get_metadata = lambda *a, **k: None
-
+            client = QualityQobuzClient(config)
             await client.login()
             return await client.inspect_track_quality(track_id, 4)
 
