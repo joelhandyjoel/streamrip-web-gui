@@ -15,24 +15,27 @@ import sqlite3
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from functools import wraps
 
+AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
+STREAMRIP_USER = os.environ.get("STREAMRIP_USER", "")
+STREAMRIP_PASS = os.environ.get("STREAMRIP_PASS", "")
 
-STREAMRIP_USER = os.environ.get("STREAMRIP_USER")
-STREAMRIP_PASS = os.environ.get("STREAMRIP_PASS")
+def require_auth(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not AUTH_ENABLED:
+            return fn(*args, **kwargs)
 
-def require_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
         auth = request.authorization
-
-        if not auth or auth.username != STREAMRIP_USER or auth.password != STREAMRIP_PASS:
+        if not auth or auth.username != AUTH_USER or auth.password != AUTH_PASS:
             return Response(
                 "Authentication required",
                 401,
-                {"WWW-Authenticate": 'Basic realm="Streamrip Web"'}
+                {"WWW-Authenticate": 'Basic realm="Streamrip"'},
             )
 
-        return f(*args, **kwargs)
-    return decorated
+        return fn(*args, **kwargs)
+    return wrapper
+
 
 
 
