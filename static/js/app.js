@@ -521,7 +521,7 @@ function renderDownloadHistory() {
     if (!el) return;
 
     if (!downloadHistory.length) {
-        el.innerHTML = `<div class="empty-state">NO DOWNLOAD HISTORY</div>`;
+        el.innerHTML = '<div class="empty-state">NO DOWNLOAD HISTORY</div>';
         return;
     }
 
@@ -532,11 +532,25 @@ function renderDownloadHistory() {
                     <div class="download-title">${d.metadata?.title || 'Unknown'}</div>
                     <div class="download-artist">${d.metadata?.artist || ''}</div>
                     <span class="status-badge completed">completed</span>
+
+                    ${d.logs?.length ? `
+                        <button class="toggle-log-btn"
+                                onclick="document.getElementById('history-log-${d.id}').classList.toggle('visible')">
+                            SHOW LOG
+                        </button>
+                    ` : ''}
                 </div>
             </div>
+
+            ${d.logs?.length ? `
+                <div class="download-log" id="history-log-${d.id}">
+                    <pre>${d.logs.join('\n')}</pre>
+                </div>
+            ` : ''}
         </div>
     `).join('');
 }
+
 
 
 
