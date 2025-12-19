@@ -855,18 +855,15 @@ def parse_quality_from_streamrip(output: str):
     )
 
     if not match:
-        logger.warning("No resolved format found")
         return None
-
-    bit_depth = int(match.group(1))
-    sample_rate = int(float(match.group(2)) * 1000)
 
     return {
         "max": {
-            "bit_depth": bit_depth,
-            "sample_rate": sample_rate
+            "bit_depth": int(match.group(1)),
+            "sample_rate": int(float(match.group(2)) * 1000)
         }
     }
+
 
 
 
