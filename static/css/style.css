@@ -959,3 +959,24 @@ button:disabled {
     padding: 8px 0;
     font-size: 12px;
 }
+
+
+.file-delete-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+.file-delete-btn:hover {
+    border-color: var(--error);
+    color: var(--error);
+}
+
+
+.album-actions,
+.file-actions {
+    display: flex;
+    align-items: center;
+}
