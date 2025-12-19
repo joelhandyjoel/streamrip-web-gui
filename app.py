@@ -249,12 +249,22 @@ def api_quality():
 
         j = r.json()
 
+        bit = j.get("maximum_bit_depth")
+        sr = j.get("maximum_sampling_rate")
+        ch = j.get("maximum_channel_count")
+        
+        label = None
+        if bit and sr:
+            label = f"{bit}-bit / {sr} kHz"
+            if ch:
+                label += f" • {ch}ch"
+        
         quality = {
-            "bit_depth": j.get("maximum_bit_depth"),
-            "sample_rate": j.get("maximum_sampling_rate"),
-            "channels": j.get("maximum_channel_count"),
+            "bit_depth": bit,
+            "sample_rate": sr,
+            "channels": ch,
             "hires": j.get("hires"),
-            "label": j.get("maximum_technical_specifications"),
+            "label": label,
         }
 
         return jsonify({"quality": quality})
