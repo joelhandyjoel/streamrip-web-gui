@@ -296,14 +296,43 @@ async function loadAlbumArtForVisibleItems() {
 async function downloadFromUrl(url) {
     const quality = document.getElementById('qualitySelect').value;
 
-    await fetch('/api/download-from-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, quality: parseInt(quality) })
+    // Find metadata from the clicked result
+    let metadata = {};
+
+    document.querySelectorAll('.search-result-item').forEach(item => {
+        const btn = item.querySelector('.result-download-btn');
+        if (btn && btn.getAttribute('onclick')?.includes(url)) {
+            metadata = {
+                title: item.querySelector('.result-title')?.textContent || '',
+                artist: item.querySelector('.result-artist')?.textContent || '',
+                service: item.dataset.source || '',
+                album_art: item.querySelector('.result-album-art img')?.src || ''
+            };
+        }
     });
 
-    switchTab('active');
+    // 🚫 Prevent double-clicks
+    const buttons = document.querySelectorAll('.result-download-btn');
+    buttons.forEach(b => b.disabled = true);
+
+    try {
+        await fetch('/api/download-from-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url,
+                quality: parseInt(quality),
+                metadata     // ✅ IMPORTANT
+            })
+        });
+
+        switchTab('active');
+
+    } finally {
+        buttons.forEach(b => b.disabled = false);
+    }
 }
+
 
 /* ===============================
    CONFIG
