@@ -25,7 +25,8 @@ RUN pip install --no-cache-dir \
     flask \
     flask-cors \
     gunicorn \
-    gevent
+    gevent \
+    requests
 
 # ---- app files ----
 COPY app.py /app/
