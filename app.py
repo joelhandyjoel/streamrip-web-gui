@@ -806,7 +806,7 @@ def fetch_deezer_metadata(item_id, item_type):
     return metadata
     
 
-@app.route('/api/quality', methods=['POST'])
+@app.route("/api/quality", methods=["POST"])
 def api_quality():
     data = request.json or {}
 
@@ -817,56 +817,29 @@ def api_quality():
     if not track_id:
         return jsonify({"quality": None})
 
+    async def run():
+        config = Config("/config/streamrip/config.toml")
+        client = QualityQobuzClient(config)
+        await client.login()
+
+        result = await client.inspect_track_quality(track_id, 4)
+        return result
+
     try:
-        # Load config
-        with open(STREAMRIP_CONFIG, "r") as f:
-            cfg = f.read()
-
-        user_id = re.search(r'user_id\s*=\s*"([^"]+)"', cfg).group(1)
-        token = re.search(r'user_auth_token\s*=\s*"([^"]+)"', cfg).group(1)
-        app_id = re.search(r'app_id\s*=\s*"([^"]+)"', cfg).group(1)
-
-        # Qobuz format IDs (highest first)
-        formats = [
-            (27, "FLAC 24/192"),
-            (25, "FLAC 24/96"),
-            (24, "FLAC 24/48"),
-            (7,  "FLAC 16/44.1"),
-            (5,  "MP3 320")
-        ]
-
-        for fmt_id, label in formats:
-            r = requests.get(
-                "https://www.qobuz.com/api.json/0.2/track/getFileUrl",
-                params={
-                    "track_id": track_id,
-                    "format_id": fmt_id,
-                    "intent": "stream",
-                    "app_id": app_id,
-                    "user_id": user_id,
-                    "user_auth_token": token,
-                },
-                timeout=5
-            )
-
-            if r.status_code == 200:
-                j = r.json()
-                if "bit_depth" in j:
-                    return jsonify({
-                        "quality": {
-                            "max": {
-                                "bit_depth": j["bit_depth"],
-                                "sample_rate": j["sampling_rate"] * 1000,
-                                "format": label
-                            }
-                        }
-                    })
-
-        return jsonify({"quality": None})
-
+        result = asyncio.run(run())
+        return jsonify({
+            "quality": {
+                "all": result["results"],
+                "max": next(
+                    (r for r in result["results"] if r["available"]),
+                    None
+                )
+            }
+        })
     except Exception as e:
-        logger.exception("Quality lookup failed")
+        logger.exception("quality error")
         return jsonify({"quality": None})
+
 
 
 def parse_quality_from_streamrip(output: str):
