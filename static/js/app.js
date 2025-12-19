@@ -241,30 +241,31 @@ function displayCurrentPage() {
         </div>
     `).join('');
    
-    inspectDownloadedState();
     updatePaginationControls();
     loadAlbumArtForVisibleItems();
     inspectVisibleMediaQuality();
+    inspectDownloadedState();
 }
 
 function inspectDownloadedState() {
     document.querySelectorAll('.search-result-item').forEach(async el => {
         const { source, type, id } = el.dataset;
-
         if (source !== 'qobuz') return;
 
         const downloaded = await fetchDownloadedState(source, type, id);
+        if (!downloaded) return;
 
-        if (downloaded) {
-            const btn = document.getElementById(`download-btn-${id}`);
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'DOWNLOADED';
-                btn.classList.add('downloaded');
-            }
-        }
+        const btn = document.getElementById(`download-btn-${id}`);
+        if (!btn) return;
+
+        // 🔒 HARD disable
+        btn.disabled = true;
+        btn.onclick = null;
+        btn.textContent = 'DOWNLOADED';
+        btn.classList.add('downloaded');
     });
 }
+
 
 
 
