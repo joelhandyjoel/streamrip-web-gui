@@ -12,7 +12,7 @@ services:
       PUID: 1000
       PGID: 1001
       AUTH_USER: ${AUTH_USER} # Default is blank
-      AUTH_PASS: ${AUTH_PAS} # Default is blank
+      AUTH_PASS: ${AUTH_PASS} # Default is blank
       AUTH_ENABLED: ${AUTH_ENABLED} # Default is false = off. true = on
       STREAMRIP_CONFIG_DIR: /config
       STREAMRIP_DOWNLOAD_DIR: /music
