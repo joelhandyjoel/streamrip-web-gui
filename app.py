@@ -220,22 +220,50 @@ def api_search():
 def api_quality():
     data = request.json or {}
 
-    if data.get("source") != "qobuz" or data.get("type") != "track":
+    if data.get("source") != "qobuz":
         return jsonify({"quality": None})
 
-    track_id = data.get("id")
-    if not track_id:
+    item_id = data.get("id")
+    media_type = data.get("type")
+
+    if not item_id or media_type not in ("track", "album"):
         return jsonify({"quality": None})
 
-    cmd = ["rip"]
-    if os.path.exists(STREAMRIP_CONFIG):
-        cmd += ["--config-path", STREAMRIP_CONFIG]
-    cmd += ["url", f"https://open.qobuz.com/track/{track_id}", "--dry-run"]
+    endpoint = (
+        "https://www.qobuz.com/api.json/0.2/track/get"
+        if media_type == "track"
+        else "https://www.qobuz.com/api.json/0.2/album/get"
+    )
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    quality = parse_qobuz_quality(proc.stdout)
+    try:
+        r = requests.get(
+            endpoint,
+            params={
+                f"{media_type}_id": item_id,
+                "app_id": get_qobuz_app_id(),
+            },
+            timeout=5,
+        )
 
-    return jsonify({"quality": quality})
+        if r.status_code != 200:
+            return jsonify({"quality": None})
+
+        data = r.json()
+
+        return jsonify({
+            "quality": {
+                "bit_depth": data.get("maximum_bit_depth"),
+                "sample_rate": data.get("maximum_sampling_rate"),
+                "channels": data.get("maximum_channel_count"),
+                "hires": data.get("hires", False),
+                "label": data.get("maximum_technical_specifications"),
+            }
+        })
+
+    except Exception as e:
+        logger.exception("quality lookup failed")
+        return jsonify({"quality": None})
+
 
 # ------------------------------------------------------------------------------
 # Helpers
