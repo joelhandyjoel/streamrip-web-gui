@@ -124,7 +124,7 @@ class DownloadWorker(threading.Thread):
                     broadcast_sse({
                         "type": "download_progress",
                         "id": task_id,
-                        "output": "\n".join(output[-5:]),
+                        "line": line.rstrip(),
                     })
 
                 proc.wait()
