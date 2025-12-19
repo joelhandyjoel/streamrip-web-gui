@@ -218,31 +218,42 @@ def api_delete_file():
         return jsonify({"error": str(e)}), 500
 
 
+
+
+
+
 @app.route("/api/delete-folder", methods=["POST"])
 def api_delete_folder():
     data = request.json or {}
-    rel_path = data.get("path")
+    folder = data.get("path")
 
-    if not rel_path:
-        return jsonify({"error": "path required"}), 400
+    if not folder:
+        return jsonify({"error": "Missing folder path"}), 400
 
-    abs_path = os.path.abspath(os.path.join(DOWNLOAD_DIR, rel_path))
+    # Absolute path inside music dir
+    full_path = os.path.join(DOWNLOAD_DIR, folder)
 
-    # 🔒 Safety: must stay inside download dir
-    if not abs_path.startswith(os.path.abspath(DOWNLOAD_DIR)):
-        return jsonify({"error": "invalid path"}), 403
-
-    if not os.path.exists(abs_path):
-        return jsonify({"error": "folder not found"}), 404
-
-    if not os.path.isdir(abs_path):
-        return jsonify({"error": "not a folder"}), 400
+    if not os.path.exists(full_path):
+        return jsonify({"error": "Folder not found"}), 404
 
     try:
-        shutil.rmtree(abs_path)
-        return jsonify({"status": "deleted"})
+        # 1️⃣ Delete album folder
+        shutil.rmtree(full_path)
+
+        # 2️⃣ RESET STREAMRIP DB (critical)
+        db_path = "/config/streamrip/downloads.db"
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+        return jsonify({
+            "status": "ok",
+            "message": "Album deleted and download database reset"
+        })
+
     except Exception as e:
+        logger.exception("Failed to delete album")
         return jsonify({"error": str(e)}), 500
+
 
 
 
