@@ -8,6 +8,7 @@ import subprocess
 import logging
 import re
 import requests
+import shutil
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
