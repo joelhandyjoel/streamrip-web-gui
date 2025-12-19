@@ -811,40 +811,68 @@ def api_quality():
     data = request.json or {}
 
     if data.get('source') != 'qobuz' or data.get('type') != 'track':
-        return jsonify({'supported': False})
+        return jsonify({'quality': None})
 
     track_id = data.get('id')
     if not track_id:
-        return jsonify({'error': 'Missing track id'}), 400
+        return jsonify({'quality': None})
 
     try:
-        cmd = [
-            'rip',
-            '-vv',
-            'url',
-            f'https://open.qobuz.com/track/{track_id}'
+        app_id = get_qobuz_app_id()
+
+        # format_id → known Qobuz formats
+        FORMATS = [
+            (27, "24bit"),  # Hi-Res FLAC
+            (7,  "16bit"),  # CD FLAC
+            (5,  "mp3")
         ]
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=20
-        )
+        best = None
+        all_results = []
 
-        quality = parse_qobuz_quality(result.stdout)
+        for fmt_id, label in FORMATS:
+            params = {
+                "track_id": track_id,
+                "format_id": fmt_id,
+                "intent": "stream",
+                "app_id": app_id
+            }
+
+            r = requests.get(
+                "https://www.qobuz.com/api.json/0.2/track/getFileUrl",
+                params=params,
+                timeout=5
+            )
+
+            if r.status_code != 200:
+                continue
+
+            j = r.json()
+            if "url" not in j:
+                continue
+
+            entry = {
+                "format_id": fmt_id,
+                "label": label,
+                "bit_depth": j.get("bit_depth"),
+                "sample_rate": j.get("sampling_rate")
+            }
+
+            all_results.append(entry)
+            if not best:
+                best = entry
 
         return jsonify({
-            'id': track_id,
-            'quality': quality
+            "id": track_id,
+            "quality": {
+                "max": best,
+                "all": all_results
+            }
         })
 
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Timeout'}), 504
     except Exception as e:
-        logger.exception("Quality inspection failed")
-        return jsonify({'error': str(e)}), 500
-
+        logger.exception("Quality check failed")
+        return jsonify({"quality": None})
 
 
 
