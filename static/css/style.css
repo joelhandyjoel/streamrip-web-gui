@@ -867,6 +867,17 @@ button:disabled {
     border-color: var(--text-tertiary);
 }
 
+/* Ultra Hi-Res (>= 88.2 kHz) */
+.quality-badge.ultra {
+    color: #00f0ff;
+    border-color: #00f0ff;
+    background: rgba(0, 240, 255, 0.08);
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+    font-weight: 600;
+}
+
+
+
 /* Hi-Res */
 .quality-badge.hires {
     color: var(--success);
