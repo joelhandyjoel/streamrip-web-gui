@@ -231,35 +231,38 @@ def api_quality():
         return jsonify({"quality": None})
 
     try:
-        app_id = get_qobuz_app_id()
+        # Hardcode a known-working public app_id
+        app_id = "798273057"
 
         r = requests.get(
             "https://www.qobuz.com/api.json/0.2/track/get",
             params={
                 "track_id": track_id,
-                "app_id": app_id
+                "app_id": app_id,
             },
-            timeout=5
+            timeout=5,
         )
 
         if r.status_code != 200:
+            logger.error("Qobuz API error %s", r.status_code)
             return jsonify({"quality": None})
 
-        data = r.json()
+        j = r.json()
 
         quality = {
-            "bit_depth": data.get("maximum_bit_depth"),
-            "sample_rate": data.get("maximum_sampling_rate"),
-            "channels": data.get("maximum_channel_count"),
-            "hires": data.get("hires"),
-            "label": data.get("maximum_technical_specifications"),
+            "bit_depth": j.get("maximum_bit_depth"),
+            "sample_rate": j.get("maximum_sampling_rate"),
+            "channels": j.get("maximum_channel_count"),
+            "hires": j.get("hires"),
+            "label": j.get("maximum_technical_specifications"),
         }
 
         return jsonify({"quality": quality})
 
-    except Exception as e:
+    except Exception:
         logger.exception("quality error")
         return jsonify({"quality": None})
+
 
 
 
