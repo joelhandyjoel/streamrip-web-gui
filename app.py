@@ -216,6 +216,15 @@ def api_search():
 
     return jsonify({"results": results})
 
+
+def get_qobuz_app_id():
+    """
+    Return a valid Qobuz app_id.
+    Streamrip uses 798273057 and it works without auth.
+    """
+    return "798273057"
+
+
 # ------------------------------------------------------------------------------
 # QUALITY ENDPOINT (STABLE)
 # ------------------------------------------------------------------------------
