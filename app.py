@@ -215,6 +215,34 @@ def api_delete_file():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/delete-folder", methods=["POST"])
+def api_delete_folder():
+    data = request.json or {}
+    rel_path = data.get("path")
+
+    if not rel_path:
+        return jsonify({"error": "path required"}), 400
+
+    abs_path = os.path.abspath(os.path.join(DOWNLOAD_DIR, rel_path))
+
+    # 🔒 Safety: must stay inside download dir
+    if not abs_path.startswith(os.path.abspath(DOWNLOAD_DIR)):
+        return jsonify({"error": "invalid path"}), 403
+
+    if not os.path.exists(abs_path):
+        return jsonify({"error": "folder not found"}), 404
+
+    if not os.path.isdir(abs_path):
+        return jsonify({"error": "not a folder"}), 400
+
+    try:
+        shutil.rmtree(abs_path)
+        return jsonify({"status": "deleted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 @app.route("/api/search", methods=["POST"])
 def api_search():
     data = request.json or {}
