@@ -240,30 +240,45 @@ def api_search():
 # ------------------------------------------------------------------------------
 @app.route("/api/browse", methods=["GET"])
 def api_browse():
-    base = DOWNLOAD_DIR
+    items = []
 
-    if not os.path.exists(base):
-        return jsonify([])
+    if not os.path.exists(DOWNLOAD_DIR):
+        return jsonify(items)
 
-    files = []
+    for entry in sorted(os.listdir(DOWNLOAD_DIR)):
+        full_path = os.path.join(DOWNLOAD_DIR, entry)
 
-    for root, dirs, filenames in os.walk(base):
-        for name in filenames:
-            path = os.path.join(root, name)
-            try:
-                stat = os.stat(path)
-            except OSError:
-                continue
+        if os.path.isdir(full_path):
+            # Album folder
+            tracks = []
+            for f in sorted(os.listdir(full_path)):
+                fp = os.path.join(full_path, f)
+                if os.path.isfile(fp):
+                    tracks.append({
+                        "name": f,
+                        "path": os.path.relpath(fp, DOWNLOAD_DIR),
+                        "size": os.path.getsize(fp),
+                        "modified": os.path.getmtime(fp),
+                    })
 
-            files.append({
-                "name": os.path.relpath(path, base),
-                "size": stat.st_size,
-                "modified": int(stat.st_mtime),
+            items.append({
+                "type": "album",
+                "name": entry,
+                "tracks": tracks,
             })
 
-    # newest first
-    files.sort(key=lambda x: x["modified"], reverse=True)
-    return jsonify(files)
+        elif os.path.isfile(full_path):
+            # Loose file
+            items.append({
+                "type": "file",
+                "name": entry,
+                "path": entry,
+                "size": os.path.getsize(full_path),
+                "modified": os.path.getmtime(full_path),
+            })
+
+    return jsonify(items)
+
 
 
 # ------------------------------------------------------------------------------
