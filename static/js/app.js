@@ -263,17 +263,24 @@ function applyQuality(id, data) {
 function inspectVisibleMediaQuality() {
     requestAnimationFrame(() => {
         document.querySelectorAll('.search-result-item').forEach(async el => {
-            const source = el.dataset.source;
-            const type = el.dataset.type;
+            let source = el.dataset.source;
+            let type = el.dataset.type;
             const id = el.dataset.id;
 
-            if (source === 'qobuz' && (type === 'track' || type === 'album')) {
+            if (source !== 'qobuz') return;
+
+            // 🔥 NORMALIZE streamrip types
+            if (type === 'tracks') type = 'track';
+            if (type === 'albums') type = 'album';
+
+            if (type === 'track' || type === 'album') {
                 const data = await fetchMediaQuality(source, type, id);
                 applyQuality(id, data);
             }
         });
     });
 }
+
 
 
 /* ===============================
