@@ -171,7 +171,7 @@ function displayCurrentPage() {
             <div class="result-info">
                 <span class="result-service">${r.service}</span>
 
-                ${r.service === 'qobuz' && r.type === 'track'
+                ${r.service === 'qobuz' && (r.type === 'track' || r.type === 'album')
                     ? `<span class="quality-badge loading" id="quality-${r.id}">
                         Checking…
                        </span>`
@@ -191,7 +191,7 @@ function displayCurrentPage() {
 
     updatePaginationControls();
     loadAlbumArtForVisibleItems();
-    inspectVisibleTrackQuality();
+    inspectVisibleMediaQuality();
 }
 
 /* ===============================
@@ -213,59 +213,50 @@ function changePage(dir) {
 }
 
 /* ===============================
-   QUALITY INSPECTION
+   QUALITY INSPECTION (TRACKS + ALBUMS)
 ================================ */
 
-async function fetchTrackQuality(trackId) {
-    if (qualityCache.has(trackId)) {
-        return qualityCache.get(trackId);
-    }
+async function fetchMediaQuality(source, type, id) {
+    const key = `${source}:${type}:${id}`;
+    if (qualityCache.has(key)) return qualityCache.get(key);
 
     const res = await fetch('/api/quality', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            source: 'qobuz',
-            type: 'track',
-            id: trackId
-        })
+        body: JSON.stringify({ source, type, id })
     });
 
     const data = await res.json();
-    qualityCache.set(trackId, data);
+    qualityCache.set(key, data);
     return data;
 }
 
-function applyQuality(trackId, data) {
-    const el = document.getElementById(`quality-${trackId}`);
+function applyQuality(id, data) {
+    const el = document.getElementById(`quality-${id}`);
     if (!el) return;
 
     el.classList.remove('loading');
 
-    if (!data || !data.quality) {
+    if (!data?.quality?.bit_depth) {
         el.textContent = 'Unknown';
         el.classList.add('unknown');
         return;
     }
 
-    const q = data.quality;
+    el.textContent = data.quality.label ||
+        `${data.quality.bit_depth}-bit / ${data.quality.sample_rate} kHz`;
 
-    // Use server-generated label (best!)
-    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
-
-    if (q.hires || q.bit_depth > 16) {
-        el.classList.add('hires');
-    } else {
-        el.classList.add('cd');
-    }
+    el.classList.add(data.quality.bit_depth > 16 ? 'hires' : 'cd');
 }
 
-function inspectVisibleTrackQuality() {
+function inspectVisibleMediaQuality() {
     requestAnimationFrame(() => {
         document.querySelectorAll('.search-result-item').forEach(async el => {
-            if (el.dataset.source === 'qobuz' && el.dataset.type === 'track') {
-                const data = await fetchTrackQuality(el.dataset.id);
-                applyQuality(el.dataset.id, data);
+            const { source, type, id } = el.dataset;
+
+            if (source === 'qobuz' && (type === 'track' || type === 'album')) {
+                const data = await fetchMediaQuality(source, type, id);
+                applyQuality(id, data);
             }
         });
     });
