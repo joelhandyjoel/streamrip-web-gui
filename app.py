@@ -14,6 +14,8 @@ import wraps
 
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from functools import wraps
+
 
 STREAMRIP_USER = os.environ.get("STREAMRIP_USER")
 STREAMRIP_PASS = os.environ.get("STREAMRIP_PASS")
