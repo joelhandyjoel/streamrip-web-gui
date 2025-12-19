@@ -383,14 +383,16 @@ def api_album_art():
 def api_config():
     try:
         if not os.path.exists(STREAMRIP_CONFIG):
-            return jsonify({"config": ""})
+            return jsonify({"config": "", "path": STREAMRIP_CONFIG})
 
         with open(STREAMRIP_CONFIG, "r") as f:
-            return jsonify({"config": f.read()})
-    except Exception as e:
+            return jsonify({
+                "config": f.read(),
+                "path": STREAMRIP_CONFIG
+            })
+    except Exception:
         logger.exception("config error")
-        return jsonify({"config": ""})
-
+        return jsonify({"config": "", "path": STREAMRIP_CONFIG})
 
 
 # ------------------------------------------------------------------------------
