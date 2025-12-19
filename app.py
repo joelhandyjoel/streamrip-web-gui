@@ -25,12 +25,15 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 app = Flask(__name__)
 
+
+DOWNLOADS_DB = "/config/streamrip/downloads.db"
 STREAMRIP_CONFIG = os.environ.get(
     "STREAMRIP_CONFIG",
     "/config/streamrip/config.toml"
 )
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/music")
 MAX_CONCURRENT_DOWNLOADS = int(os.environ.get("MAX_CONCURRENT_DOWNLOADS", "2"))
+
 
 download_queue = queue.Queue()
 active_downloads = {}
@@ -228,7 +231,33 @@ def api_delete_file():
 
 
 
+def is_downloaded_qobuz(media_type, media_id):
+    if not os.path.exists(DOWNLOADS_DB):
+        return False
 
+    try:
+        conn = sqlite3.connect(DOWNLOADS_DB)
+        cur = conn.cursor()
+
+        if media_type == "track":
+            cur.execute(
+                "SELECT 1 FROM tracks WHERE track_id = ? LIMIT 1",
+                (str(media_id),)
+            )
+        elif media_type == "album":
+            cur.execute(
+                "SELECT 1 FROM albums WHERE album_id = ? LIMIT 1",
+                (str(media_id),)
+            )
+        else:
+            return False
+
+        return cur.fetchone() is not None
+
+    except Exception:
+        return False
+    finally:
+        conn.close()
 
 
 @app.route("/api/delete-folder", methods=["POST"])
