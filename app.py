@@ -223,48 +223,37 @@ def api_search():
 def api_quality():
     data = request.json or {}
 
-    if data.get("source") != "qobuz" or data.get("type") != "track":
-        return jsonify({"quality": None})
+    source = data.get("source")
+    media_type = data.get("type")
+    item_id = data.get("id")
 
-    track_id = data.get("id")
-    if not track_id:
+    if source != "qobuz" or not item_id:
         return jsonify({"quality": None})
 
     try:
-        # Hardcode a known-working public app_id
-        app_id = "798273057"
+        app_id = get_qobuz_app_id()
 
-        r = requests.get(
-            "https://www.qobuz.com/api.json/0.2/track/get",
-            params={
-                "track_id": track_id,
-                "app_id": app_id,
-            },
-            timeout=5,
-        )
-
-        if r.status_code != 200:
-            logger.error("Qobuz API error %s", r.status_code)
+        if media_type == "track":
+            url = "https://www.qobuz.com/api.json/0.2/track/get"
+            params = {"track_id": item_id, "app_id": app_id}
+        elif media_type == "album":
+            url = "https://www.qobuz.com/api.json/0.2/album/get"
+            params = {"album_id": item_id, "app_id": app_id}
+        else:
             return jsonify({"quality": None})
 
-        j = r.json()
+        r = requests.get(url, params=params, timeout=5)
+        if r.status_code != 200:
+            return jsonify({"quality": None})
 
-        bit = j.get("maximum_bit_depth")
-        sr = j.get("maximum_sampling_rate")
-        ch = j.get("maximum_channel_count")
-        
-        label = None
-        if bit and sr:
-            label = f"{bit}-bit / {sr} kHz"
-            if ch:
-                label += f" • {ch}ch"
-        
+        data = r.json()
+
         quality = {
-            "bit_depth": bit,
-            "sample_rate": sr,
-            "channels": ch,
-            "hires": j.get("hires"),
-            "label": label,
+            "bit_depth": data.get("maximum_bit_depth"),
+            "sample_rate": data.get("maximum_sampling_rate"),
+            "channels": data.get("maximum_channel_count"),
+            "hires": data.get("hires"),
+            "label": data.get("maximum_technical_specifications"),
         }
 
         return jsonify({"quality": quality})
