@@ -127,6 +127,63 @@ function renderDownloadHistory() {
 }
 
 
+const qualityCache = new Map();
+
+async function fetchTrackQuality(trackId) {
+    if (qualityCache.has(trackId)) {
+        return qualityCache.get(trackId);
+    }
+
+    try {
+        const response = await fetch('/api/quality', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source: 'qobuz',
+                type: 'track',
+                id: trackId
+            })
+        });
+
+        const data = await response.json();
+
+        qualityCache.set(trackId, data);
+        return data;
+    } catch (err) {
+        console.error('Quality fetch failed:', err);
+        return { error: true };
+    }
+}
+
+function applyQualityToBadge(trackId, data) {
+    const badge = document.getElementById(`quality-${trackId}`);
+    if (!badge) return;
+
+    badge.classList.remove('loading');
+
+    if (!data || data.error || !data.quality || !data.quality.max) {
+        badge.textContent = 'Unknown';
+        badge.classList.add('unknown');
+        return;
+    }
+
+    const max = data.quality.max;
+
+    if (max.bit_depth && max.sample_rate) {
+        badge.textContent = `${max.bit_depth}-bit / ${max.sample_rate / 1000}kHz`;
+
+        if (max.bit_depth > 16) {
+            badge.classList.add('hires');
+        } else {
+            badge.classList.add('cd');
+        }
+    } else {
+        badge.textContent = 'Available';
+        badge.classList.add('unknown');
+    }
+}
+
+
 function handleDownloadProgress(data) {
     const download = activeDownloads.get(data.id);
     if (download) {
@@ -460,12 +517,19 @@ function displayCurrentPage() {
     resultsDiv.innerHTML = pageResults.map(result => `
         <div class="search-result-item" data-id="${result.id}" data-source="${result.service}" data-type="${result.type}">
             <div class="result-album-art placeholder" id="art-${result.id}">▶</div>
-            <div class="result-info">
-                <span class="result-service">${result.service}</span>
-                ${result.title ? `<div class="result-title">${result.title}</div>` : ''}
-                <div class="result-artist">${result.artist || result.desc}</div>
-                ${result.id ? `<div class="result-id">ID: ${result.id} (${result.type})</div>` : ''}
-            </div>
+				<div class="result-info">
+				    <span class="result-service">${result.service}</span>
+				
+				    ${result.type === 'track' && result.service === 'qobuz'
+				        ? `<span class="quality-badge loading" id="quality-${result.id}">Checking…</span>`
+				        : ''
+				    }
+				
+				    ${result.title ? `<div class="result-title">${result.title}</div>` : ''}
+				    <div class="result-artist">${result.artist || result.desc}</div>
+				    ${result.id ? `<div class="result-id">ID: ${result.id} (${result.type})</div>` : ''}
+				</div>
+
             ${result.url ? `
                 <button class="result-download-btn" onclick="downloadFromUrl('${result.url}')">
                     DOWNLOAD
