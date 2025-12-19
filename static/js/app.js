@@ -376,9 +376,15 @@ async function loadFiles() {
             if (item.type === 'album') {
                 return `
                     <div class="file-item">
-                        <div class="file-name" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                            📁 ${item.name}
+                        <div class="file-name file-album-header">
+                            <span onclick="this.parentElement.nextElementSibling.classList.toggle('hidden')">
+                                📁 ${item.name}
+                            </span>
+                            <button class="danger-btn" onclick="deleteFolder('${item.name}')">
+                                DELETE ALBUM
+                            </button>
                         </div>
+            
                         <div class="file-tracks hidden">
                             ${item.tracks.map(t => `
                                 <div class="file-track">
@@ -390,6 +396,7 @@ async function loadFiles() {
                     </div>
                 `;
             }
+
 
             // Loose file
             return `
