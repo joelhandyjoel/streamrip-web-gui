@@ -361,23 +361,68 @@ async function loadConfig() {
 ================================ */
 
 async function loadFiles() {
-    const res = await fetch('/api/browse');
-    const files = await res.json();
+    try {
+        const res = await fetch('/api/browse');
+        const items = await res.json();
 
-    const el = document.getElementById('fileList');
-    if (!files.length) {
-        el.innerHTML = '<div class="empty-state">NO FILES FOUND</div>';
+        const container = document.getElementById('fileList');
+
+        if (!items.length) {
+            container.innerHTML = '<div class="empty-state">NO FILES FOUND</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(item => {
+            if (item.type === 'album') {
+                return `
+                    <div class="file-item">
+                        <div class="file-name" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                            📁 ${item.name}
+                        </div>
+                        <div class="file-tracks hidden">
+                            ${item.tracks.map(t => `
+                                <div class="file-track">
+                                    <span>${t.name}</span>
+                                    <button onclick="deleteFile('${t.path}')">DELETE</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Loose file
+            return `
+                <div class="file-item">
+                    <div class="file-name">
+                        ${item.name}
+                    </div>
+                    <button onclick="deleteFile('${item.path}')">DELETE</button>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        alert('Failed to load files: ' + err.message);
+    }
+}
+
+async function deleteFile(path) {
+    if (!confirm(`Delete ${path}?`)) return;
+
+    const res = await fetch('/api/delete-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+    });
+
+    if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Delete failed');
         return;
     }
 
-    el.innerHTML = files.map(f => `
-        <div class="file-item">
-            <div class="file-name">${f.name}</div>
-            <div class="file-meta">
-                ${(f.size / 1024 / 1024).toFixed(2)} MB
-            </div>
-        </div>
-    `).join('');
+    loadFiles(); // refresh view
 }
 
 
