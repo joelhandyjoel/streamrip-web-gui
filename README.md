@@ -1,3 +1,6 @@
+WORK IN PROGRESS - added a few features to existing web gui, notebly sample rate, file management
+
+
 ![streamrip web interface](https://github.com/AnOddName/streamrip-web-gui/blob/main/demo/home_screen.png?raw=true)
 
 
@@ -217,6 +220,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
