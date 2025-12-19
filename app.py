@@ -818,60 +818,30 @@ def api_quality():
         return jsonify({'quality': None})
 
     try:
-        app_id = get_qobuz_app_id()
-
-        # format_id → known Qobuz formats
-        FORMATS = [
-            (27, "24bit"),  # Hi-Res FLAC
-            (7,  "16bit"),  # CD FLAC
-            (5,  "mp3")
+        cmd = [
+            "rip",
+            "--config-path", STREAMRIP_CONFIG,
+            "-vv",
+            "url",
+            f"https://open.qobuz.com/track/{track_id}"
         ]
 
-        best = None
-        all_results = []
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
 
-        for fmt_id, label in FORMATS:
-            params = {
-                "track_id": track_id,
-                "format_id": fmt_id,
-                "intent": "stream",
-                "app_id": app_id
-            }
-
-            r = requests.get(
-                "https://www.qobuz.com/api.json/0.2/track/getFileUrl",
-                params=params,
-                timeout=5
-            )
-
-            if r.status_code != 200:
-                continue
-
-            j = r.json()
-            if "url" not in j:
-                continue
-
-            entry = {
-                "format_id": fmt_id,
-                "label": label,
-                "bit_depth": j.get("bit_depth"),
-                "sample_rate": j.get("sampling_rate")
-            }
-
-            all_results.append(entry)
-            if not best:
-                best = entry
+        quality = parse_quality_from_streamrip(result.stdout)
 
         return jsonify({
             "id": track_id,
-            "quality": {
-                "max": best,
-                "all": all_results
-            }
+            "quality": quality
         })
 
     except Exception as e:
-        logger.exception("Quality check failed")
+        logger.exception("Quality inspection failed")
         return jsonify({"quality": None})
 
 
