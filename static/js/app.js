@@ -380,28 +380,29 @@ async function loadFiles() {
             if (item.type === 'album') {
                 return `
                     <div class="album-block">
-
-                        <div class="album-row">
-                            <div class="album-title"
-                                 onclick="this.parentElement.nextElementSibling.classList.toggle('hidden')">
+            
+                        <div class="album-row"
+                             onclick="this.nextElementSibling.classList.toggle('hidden')">
+                            <div class="album-title">
                                 📁 ${item.name}
                             </div>
-
+            
                             <div class="album-actions">
                                 <button class="delete-album-btn"
-                                        onclick="deleteFolder('${item.name}')">
+                                        onclick="event.stopPropagation(); deleteFolder('${item.name}')">
                                     DELETE ALBUM
                                 </button>
                             </div>
                         </div>
-
+            
+                        <!-- CLOSED BY DEFAULT -->
                         <div class="album-tracks hidden">
                             ${item.tracks.map(t => `
                                 <div class="file-row">
                                     <div class="file-name">
                                         ${t.name}
                                     </div>
-
+            
                                     <div class="file-actions">
                                         <button class="file-delete-btn"
                                                 onclick="deleteFile('${t.path}')">
@@ -411,10 +412,11 @@ async function loadFiles() {
                                 </div>
                             `).join('')}
                         </div>
-
+            
                     </div>
                 `;
             }
+
 
             // =====================
             // LOOSE FILE
