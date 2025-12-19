@@ -18,7 +18,7 @@ from ..exceptions import (
     MissingCredentialsError,
     NonStreamableError,
 )
-from .client import Client
+from streamrip.core.client import Client
 from .downloadable import BasicDownloadable, Downloadable
 
 logger = logging.getLogger("streamrip")
