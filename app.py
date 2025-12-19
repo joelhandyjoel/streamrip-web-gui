@@ -840,45 +840,6 @@ def api_quality():
         logger.exception("Quality inspection failed")
         return jsonify({'error': str(e)}), 500
 
-def parse_quality_from_output(output: str):
-    """
-    Extracts quality info from Streamrip debug logs.
-    Relies on a log line like:
-    QUALITY INSPECTION for track <id>: [...]
-    """
-    import re
-
-    match = re.search(r'QUALITY INSPECTION.*?(\[.*\])', output, re.S)
-    if not match:
-        logger.warning("No QUALITY INSPECTION line found in output")
-        return None
-
-    try:
-        qualities = json.loads(match.group(1))
-    except Exception as e:
-        logger.error(f"Failed to parse quality JSON: {e}")
-        return None
-
-    available = [q for q in qualities if q.get('available')]
-    if not available:
-        return None
-
-    best = available[0]
-
-    return {
-        'max': {
-            'bit_depth': best.get('bit_depth'),
-            'sample_rate': best.get('sampling_rate'),
-            'format_id': best.get('format_id')
-        },
-        'all': available
-    }
-
-
-
-
-
-
 
 @app.route('/api/download-from-url', methods=['POST'])
 def download_from_url():
