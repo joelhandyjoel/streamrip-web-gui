@@ -203,32 +203,8 @@ async function searchMusic() {
 }
 
 
-async function inspectDownloadedState() {
-    document.querySelectorAll('.search-result-item').forEach(async item => {
-        const { source, type, id } = item.dataset;
-        if (source !== 'qobuz') return;
 
-        const res = await fetch('/api/is-downloaded', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source, type, id })
-        });
 
-        const { downloaded } = await res.json();
-        if (!downloaded) return;
-
-        const oldBtn = document.getElementById(`download-btn-${id}`);
-        if (!oldBtn) return;
-
-        // 🔥 Replace button completely (bulletproof)
-        const newBtn = document.createElement('button');
-        newBtn.className = 'result-download-btn downloaded';
-        newBtn.textContent = 'DOWNLOADED';
-        newBtn.disabled = true;
-
-        oldBtn.replaceWith(newBtn);
-    });
-}
 
 
 
@@ -281,7 +257,41 @@ function displayCurrentPage() {
 
 
 
+async function inspectDownloadedState() {
+    const items = document.querySelectorAll('.search-result-item');
 
+    for (const el of items) {
+        const source = el.dataset.source;
+        const type = el.dataset.type;
+        const id = el.dataset.id;
+
+        const btn = el.querySelector('.result-download-btn');
+        if (!btn) continue;
+
+        try {
+            const res = await fetch('/api/is-downloaded', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source, type, id })
+            });
+
+            const data = await res.json();
+
+            if (data.downloaded) {
+                btn.disabled = true;
+                btn.textContent = 'DOWNLOADED';
+                btn.classList.add('downloaded');
+            } else if (data.file_exists) {
+                btn.disabled = true;
+                btn.textContent = 'EXISTS';
+                btn.classList.add('exists');
+            }
+
+        } catch (err) {
+            console.warn('download check failed', err);
+        }
+    }
+}
 
 
 /* ===============================
