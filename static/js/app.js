@@ -70,24 +70,28 @@ function handleDownloadProgress(data) {
 }
 
 function handleDownloadCompleted(data) {
-    console.log("DOWNLOAD COMPLETED EVENT:", data);
-
     const d = activeDownloads.get(data.id);
-    if (!d) {
-        console.warn("Completed download not found in active:", data.id);
-        return;
-    }
+    if (!d) return;
 
     d.status = data.status || 'completed';
     d.output = data.output || '';
 
-    // move to history
-    downloadHistory.unshift(d);
+    // move to history FIRST
+    downloadHistory.unshift({
+        ...d,
+        completedAt: Date.now()
+    });
+
     activeDownloads.delete(data.id);
 
-    renderActiveDownloads();
-    renderDownloadHistory();
+    // render ONLY the currently visible tab
+    if (currentTab === 'active') {
+        renderActiveDownloads();
+    } else if (currentTab === 'history') {
+        renderDownloadHistory();
+    }
 }
+
 
 
 
@@ -409,27 +413,24 @@ function renderDownloadHistory() {
    TABS
 ================================ */
 
-function switchTab(tab) {
+function switchTab(tab, element) {
     currentTab = tab;
 
-    document.querySelectorAll('.tab-content').forEach(t =>
-        t.classList.remove('active')
-    );
-    document.getElementById(`${tab}Tab`).classList.add('active');
+    if (element) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(tab + 'Tab').classList.add('active');
 
     if (tab === 'active') {
         renderActiveDownloads();
-    }
-
-    if (tab === 'history') {
-        fetch('/api/history')
-            .then(r => r.json())
-            .then(data => {
-                downloadHistory = data || [];
-                renderDownloadHistory();
-            });
+    } else if (tab === 'history') {
+        renderDownloadHistory();
     }
 }
+
 
 
 /* ===============================
