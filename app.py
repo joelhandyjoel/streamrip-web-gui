@@ -11,13 +11,23 @@ import requests
 import shutil
 import sqlite3
 
-
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    Response,
+    stream_with_context,
+)
 from functools import wraps
 
+# ------------------------------------------------------------------------------
+# Authentication
+# ------------------------------------------------------------------------------
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "false").lower() == "true"
 AUTH_USER = os.environ.get("AUTH_USER", "")
 AUTH_PASS = os.environ.get("AUTH_PASS", "")
+
 
 def require_auth(fn):
     @wraps(fn)
@@ -34,10 +44,8 @@ def require_auth(fn):
             )
 
         return fn(*args, **kwargs)
+
     return wrapper
-
-
-
 
 
 # ------------------------------------------------------------------------------
@@ -51,15 +59,10 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 app = Flask(__name__)
 
-
 DOWNLOADS_DB = "/config/streamrip/downloads.db"
-STREAMRIP_CONFIG = os.environ.get(
-    "STREAMRIP_CONFIG",
-    "/config/streamrip/config.toml"
-)
+STREAMRIP_CONFIG = os.environ.get("STREAMRIP_CONFIG", "/config/streamrip/config.toml")
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/music")
 MAX_CONCURRENT_DOWNLOADS = int(os.environ.get("MAX_CONCURRENT_DOWNLOADS", "2"))
-
 
 download_queue = queue.Queue()
 active_downloads = {}
@@ -72,13 +75,16 @@ sse_clients = []
 def broadcast_sse(data):
     msg = f"data: {json.dumps(data)}\n\n"
     dead = []
+
     for q in sse_clients:
         try:
             q.put(msg)
         except Exception:
             dead.append(q)
+
     for q in dead:
         sse_clients.remove(q)
+
 
 @app.route("/api/events")
 def sse_events():
@@ -119,7 +125,6 @@ class DownloadWorker(threading.Thread):
             quality = task.get("quality", 3)
             metadata = task.get("metadata", {})
 
-            # 🔥 MUST SEND download_started FIRST
             active_downloads[task_id] = {
                 "id": task_id,
                 "status": "downloading",
@@ -150,8 +155,6 @@ class DownloadWorker(threading.Thread):
 
                 for line in proc.stdout:
                     output.append(line.rstrip())
-
-                    # progress events are OPTIONAL but fine
                     broadcast_sse({
                         "type": "download_progress",
                         "id": task_id,
@@ -161,15 +164,13 @@ class DownloadWorker(threading.Thread):
                 proc.wait()
                 status = "completed" if proc.returncode == 0 else "failed"
 
-                # 🔥 SEND download_completed WITH SAME ID
                 broadcast_sse({
                     "type": "download_completed",
                     "id": task_id,
-                    "status": "completed" if proc.returncode == 0 else "failed",
+                    "status": status,
                     "output": "\n".join(output),
                     "metadata": metadata,
                 })
-
 
             except Exception as e:
                 broadcast_sse({
@@ -187,14 +188,18 @@ for _ in range(MAX_CONCURRENT_DOWNLOADS):
     DownloadWorker().start()
 
 # ------------------------------------------------------------------------------
-# Routes
+# UI
 # ------------------------------------------------------------------------------
 @app.route("/")
 @require_auth
 def index():
     return render_template("index.html")
-    
+
+# ------------------------------------------------------------------------------
+# Downloads
+# ------------------------------------------------------------------------------
 @app.route("/api/download", methods=["POST"])
+@require_auth
 def api_download():
     data = request.json or {}
     url = data.get("url")
@@ -209,13 +214,14 @@ def api_download():
         "id": task_id,
         "url": url,
         "quality": quality,
-        "metadata": metadata,   # ✅ KEEP METADATA
+        "metadata": metadata,
     })
 
     return jsonify({"task_id": task_id, "status": "queued"})
 
 
 @app.route("/api/download-from-url", methods=["POST"])
+@require_auth
 def api_download_from_url():
     return api_download()
 
@@ -224,7 +230,11 @@ def api_download_from_url():
 def api_history():
     return jsonify(download_history)
 
+# ------------------------------------------------------------------------------
+# Delete files / folders
+# ------------------------------------------------------------------------------
 @app.route("/api/delete-file", methods=["POST"])
+@require_auth
 def api_delete_file():
     data = request.json or {}
     path = data.get("path")
@@ -233,102 +243,24 @@ def api_delete_file():
         return jsonify({"error": "Missing path"}), 400
 
     full_path = os.path.join(DOWNLOAD_DIR, path)
-
     if not os.path.exists(full_path):
         return jsonify({"error": "File not found"}), 404
 
     try:
-        # 1️⃣ Delete the file
         os.remove(full_path)
 
-        # 2️⃣ Reset Streamrip DB
-        db_path = "/config/streamrip/downloads.db"
-        if os.path.exists(db_path):
-            os.remove(db_path)
+        if os.path.exists(DOWNLOADS_DB):
+            os.remove(DOWNLOADS_DB)
 
-        return jsonify({
-            "status": "ok",
-            "message": "File deleted and download database reset"
-        })
+        return jsonify({"status": "ok"})
 
     except Exception as e:
         logger.exception("Failed to delete file")
         return jsonify({"error": str(e)}), 500
 
 
-def qobuz_file_exists(media_type, media_id):
-    base = DOWNLOAD_DIR
-
-    if media_type == "album":
-        # Albums are folders
-        for root, dirs, _ in os.walk(base):
-            for d in dirs:
-                if media_id in d:
-                    return True
-        return False
-
-    if media_type == "track":
-        # Tracks are files
-        for root, _, files in os.walk(base):
-            for f in files:
-                if media_id in f:
-                    return True
-        return False
-
-    return False
-
-
-def is_downloaded_qobuz(media_type, media_id):
-    if not os.path.exists(DOWNLOADS_DB):
-        return False
-
-    try:
-        conn = sqlite3.connect(DOWNLOADS_DB)
-        cur = conn.cursor()
-
-        if media_type == "track":
-            cur.execute(
-                "SELECT 1 FROM tracks WHERE track_id = ? LIMIT 1",
-                (str(media_id),)
-            )
-        elif media_type == "album":
-            cur.execute(
-                "SELECT 1 FROM albums WHERE album_id = ? LIMIT 1",
-                (str(media_id),)
-            )
-        else:
-            return False
-
-        return cur.fetchone() is not None
-
-    except Exception:
-        return False
-    finally:
-        conn.close()
-
-@app.route("/api/is-downloaded", methods=["POST"])
-def api_is_downloaded():
-    data = request.json or {}
-
-    source = data.get("source")
-    media_type = data.get("type")
-    media_id = data.get("id")
-
-    if source != "qobuz" or not media_id:
-        return jsonify({
-            "downloaded": False,
-            "file_exists": False
-        })
-
-    return jsonify({
-        "downloaded": is_downloaded_qobuz(media_type, media_id),
-        "file_exists": qobuz_file_exists(media_type, media_id)
-    })
-
-
-
-
 @app.route("/api/delete-folder", methods=["POST"])
+@require_auth
 def api_delete_folder():
     data = request.json or {}
     folder = data.get("path")
@@ -336,33 +268,25 @@ def api_delete_folder():
     if not folder:
         return jsonify({"error": "Missing folder path"}), 400
 
-    # Absolute path inside music dir
     full_path = os.path.join(DOWNLOAD_DIR, folder)
-
     if not os.path.exists(full_path):
         return jsonify({"error": "Folder not found"}), 404
 
     try:
-        # 1️⃣ Delete album folder
         shutil.rmtree(full_path)
 
-        # 2️⃣ RESET STREAMRIP DB (critical)
-        db_path = "/config/streamrip/downloads.db"
-        if os.path.exists(db_path):
-            os.remove(db_path)
+        if os.path.exists(DOWNLOADS_DB):
+            os.remove(DOWNLOADS_DB)
 
-        return jsonify({
-            "status": "ok",
-            "message": "Album deleted and download database reset"
-        })
+        return jsonify({"status": "ok"})
 
     except Exception as e:
         logger.exception("Failed to delete album")
         return jsonify({"error": str(e)}), 500
 
-
-
-
+# ------------------------------------------------------------------------------
+# Search
+# ------------------------------------------------------------------------------
 @app.route("/api/search", methods=["POST"])
 def api_search():
     data = request.json or {}
@@ -379,10 +303,10 @@ def api_search():
     cmd = ["rip"]
     if os.path.exists(STREAMRIP_CONFIG):
         cmd += ["--config-path", STREAMRIP_CONFIG]
+
     cmd += ["search", "--output-file", out, source, kind, query]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
-
     if result.returncode != 0:
         return jsonify({"error": "search failed"}), 500
 
@@ -400,7 +324,7 @@ def api_search():
             "type": i.get("media_type", kind),
             "title": i.get("desc"),
             "artist": i.get("artist"),
-            "url": f"https://open.qobuz.com/{i.get('media_type')}/{i.get('id')}"
+            "url": f"https://open.qobuz.com/{i.get('media_type')}/{i.get('id')}",
         })
 
     return jsonify({"results": results})
@@ -419,7 +343,6 @@ def api_browse():
         full_path = os.path.join(DOWNLOAD_DIR, entry)
 
         if os.path.isdir(full_path):
-            # Album folder
             tracks = []
             for f in sorted(os.listdir(full_path)):
                 fp = os.path.join(full_path, f)
@@ -438,7 +361,6 @@ def api_browse():
             })
 
         elif os.path.isfile(full_path):
-            # Loose file
             items.append({
                 "type": "file",
                 "name": entry,
@@ -449,45 +371,13 @@ def api_browse():
 
     return jsonify(items)
 
-def remove_tracks_from_db(track_ids, source="qobuz"):
-    db_path = "/config/streamrip/downloads.db"
-    if not os.path.exists(db_path):
-        return
-
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    for tid in track_ids:
-        cur.execute(
-            "DELETE FROM downloads WHERE track_id = ? AND source = ?",
-            (str(tid), source)
-        )
-
-    conn.commit()
-    conn.close()
-
-def remove_track_from_db(track_id):
-    if not os.path.exists(DOWNLOADS_DB):
-        return
-
-    try:
-        conn = sqlite3.connect(DOWNLOADS_DB)
-        cur = conn.cursor()
-        cur.execute("DELETE FROM tracks WHERE track_id = ?", (str(track_id),))
-        conn.commit()
-    finally:
-        conn.close()
-
-
 # ------------------------------------------------------------------------------
-# Qobuz helpers
+# Qobuz helpers / quality / artwork
 # ------------------------------------------------------------------------------
 def get_qobuz_app_id():
     return "798273057"
 
-# ------------------------------------------------------------------------------
-# Quality endpoint
-# ------------------------------------------------------------------------------
+
 @app.route("/api/quality", methods=["POST"])
 def api_quality():
     data = request.json or {}
@@ -504,18 +394,15 @@ def api_quality():
         if media_type == "track":
             url = "https://www.qobuz.com/api.json/0.2/track/get"
             params = {"track_id": item_id, "app_id": app_id}
-        elif media_type == "album":
+        else:
             url = "https://www.qobuz.com/api.json/0.2/album/get"
             params = {"album_id": item_id, "app_id": app_id}
-        else:
-            return jsonify({"quality": None})
 
         r = requests.get(url, params=params, timeout=5)
         if r.status_code != 200:
             return jsonify({"quality": None})
 
         data = r.json()
-
         quality = {
             "bit_depth": data.get("maximum_bit_depth"),
             "sample_rate": data.get("maximum_sampling_rate"),
@@ -530,9 +417,7 @@ def api_quality():
         logger.exception("quality error")
         return jsonify({"quality": None})
 
-# ------------------------------------------------------------------------------
-# Album art
-# ------------------------------------------------------------------------------
+
 @app.route("/api/album-art")
 def api_album_art():
     source = request.args.get("source")
@@ -570,12 +455,14 @@ def api_album_art():
 # Config
 # ------------------------------------------------------------------------------
 @app.route("/api/config", methods=["GET"])
+@require_auth
 def api_config():
     if not os.path.exists(STREAMRIP_CONFIG):
         return jsonify({"config": ""})
 
     with open(STREAMRIP_CONFIG) as f:
         return jsonify({"config": f.read()})
+
 
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
