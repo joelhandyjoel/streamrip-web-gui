@@ -600,8 +600,10 @@ button:disabled {
 .result-download-btn.downloaded {
     opacity: 0.45;
     cursor: not-allowed;
-    pointer-events: none; /* 🔑 THIS */
+    pointer-events: none;
+    border-color: #555;
 }
+
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
