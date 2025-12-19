@@ -202,6 +202,38 @@ async function searchMusic() {
     displayCurrentPage();
 }
 
+
+async function inspectDownloadedState() {
+    document.querySelectorAll('.search-result-item').forEach(async item => {
+        const { source, type, id } = item.dataset;
+        if (source !== 'qobuz') return;
+
+        const res = await fetch('/api/is-downloaded', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source, type, id })
+        });
+
+        const { downloaded } = await res.json();
+        if (!downloaded) return;
+
+        const oldBtn = document.getElementById(`download-btn-${id}`);
+        if (!oldBtn) return;
+
+        // 🔥 Replace button completely (bulletproof)
+        const newBtn = document.createElement('button');
+        newBtn.className = 'result-download-btn downloaded';
+        newBtn.textContent = 'DOWNLOADED';
+        newBtn.disabled = true;
+
+        oldBtn.replaceWith(newBtn);
+    });
+}
+
+
+
+
+
 function displayCurrentPage() {
     const start = (currentPage - 1) * itemsPerPage;
     const page = allSearchResults.slice(start, start + itemsPerPage);
@@ -247,24 +279,7 @@ function displayCurrentPage() {
     inspectDownloadedState();
 }
 
-function inspectDownloadedState() {
-    document.querySelectorAll('.search-result-item').forEach(async el => {
-        const { source, type, id } = el.dataset;
-        if (source !== 'qobuz') return;
 
-        const downloaded = await fetchDownloadedState(source, type, id);
-        if (!downloaded) return;
-
-        const btn = document.getElementById(`download-btn-${id}`);
-        if (!btn) return;
-
-        // 🔒 HARD disable
-        btn.disabled = true;
-        btn.onclick = null;
-        btn.textContent = 'DOWNLOADED';
-        btn.classList.add('downloaded');
-    });
-}
 
 
 
