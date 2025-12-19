@@ -224,41 +224,36 @@ def api_quality():
         return jsonify({"quality": None})
 
     item_id = data.get("id")
-    media_type = data.get("type")
+    item_type = data.get("type")
 
-    if not item_id or media_type not in ("track", "album"):
+    if not item_id or item_type not in ("track", "album"):
         return jsonify({"quality": None})
 
-    endpoint = (
-        "https://www.qobuz.com/api.json/0.2/track/get"
-        if media_type == "track"
-        else "https://www.qobuz.com/api.json/0.2/album/get"
-    )
-
     try:
-        r = requests.get(
-            endpoint,
-            params={
-                f"{media_type}_id": item_id,
-                "app_id": get_qobuz_app_id(),
-            },
-            timeout=5,
-        )
+        app_id = get_qobuz_app_id()
+        api_base = "https://www.qobuz.com/api.json/0.2"
 
+        endpoint = "track/get" if item_type == "track" else "album/get"
+        params = {
+            f"{item_type}_id": item_id,
+            "app_id": app_id
+        }
+
+        r = requests.get(f"{api_base}/{endpoint}", params=params, timeout=5)
         if r.status_code != 200:
             return jsonify({"quality": None})
 
         data = r.json()
 
-        return jsonify({
-            "quality": {
-                "bit_depth": data.get("maximum_bit_depth"),
-                "sample_rate": data.get("maximum_sampling_rate"),
-                "channels": data.get("maximum_channel_count"),
-                "hires": data.get("hires", False),
-                "label": data.get("maximum_technical_specifications"),
-            }
-        })
+        quality = {
+            "bit_depth": data.get("maximum_bit_depth"),
+            "sample_rate": data.get("maximum_sampling_rate"),
+            "channels": data.get("maximum_channel_count"),
+            "hires": data.get("hires"),
+            "label": data.get("maximum_technical_specifications")
+        }
+
+        return jsonify({"quality": quality})
 
     except Exception as e:
         logger.exception("quality lookup failed")
