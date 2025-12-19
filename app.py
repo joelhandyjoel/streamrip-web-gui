@@ -805,7 +805,91 @@ def fetch_deezer_metadata(item_id, item_type):
     
     return metadata
     
-    
+
+@app.route('/api/quality', methods=['POST'])
+def api_quality():
+    data = request.json or {}
+
+    source = data.get('source')
+    media_type = data.get('type')
+    item_id = data.get('id')
+
+    if source != 'qobuz' or media_type != 'track' or not item_id:
+        return jsonify({
+            'error': 'Only Qobuz track quality is supported'
+        }), 400
+
+    try:
+        cmd = [
+            'rip',
+            '--no-db',
+            '-vv',
+            'url',
+            'qobuz',
+            'track',
+            f'https://open.qobuz.com/track/{item_id}'
+        ]
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        quality = parse_quality_from_output(result.stdout)
+
+        return jsonify({
+            'id': item_id,
+            'quality': quality
+        })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Quality inspection timed out'}), 504
+    except Exception as e:
+        logger.exception('Quality inspection failed')
+        return jsonify({'error': str(e)}), 500
+
+def parse_quality_from_output(output: str):
+    """
+    Extracts quality info from Streamrip debug logs.
+    Relies on a log line like:
+    QUALITY INSPECTION for track <id>: [...]
+    """
+    import re
+
+    match = re.search(r'QUALITY INSPECTION.*?(\[.*\])', output, re.S)
+    if not match:
+        logger.warning("No QUALITY INSPECTION line found in output")
+        return None
+
+    try:
+        qualities = json.loads(match.group(1))
+    except Exception as e:
+        logger.error(f"Failed to parse quality JSON: {e}")
+        return None
+
+    available = [q for q in qualities if q.get('available')]
+    if not available:
+        return None
+
+    best = available[0]
+
+    return {
+        'max': {
+            'bit_depth': best.get('bit_depth'),
+            'sample_rate': best.get('sampling_rate'),
+            'format_id': best.get('format_id')
+        },
+        'all': available
+    }
+
+
+
+
+
+
+
 @app.route('/api/download-from-url', methods=['POST'])
 def download_from_url():
     data = request.json
