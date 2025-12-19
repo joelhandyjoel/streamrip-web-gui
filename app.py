@@ -9,6 +9,8 @@ import logging
 import re
 import requests
 import shutil
+import sqlite3
+
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
@@ -330,6 +332,22 @@ def api_browse():
 
     return jsonify(items)
 
+def remove_tracks_from_db(track_ids, source="qobuz"):
+    db_path = "/config/streamrip/downloads.db"
+    if not os.path.exists(db_path):
+        return
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    for tid in track_ids:
+        cur.execute(
+            "DELETE FROM downloads WHERE track_id = ? AND source = ?",
+            (str(tid), source)
+        )
+
+    conn.commit()
+    conn.close()
 
 
 # ------------------------------------------------------------------------------
