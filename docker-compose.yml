@@ -11,7 +11,8 @@ services:
     environment:
       PUID: 1000
       PGID: 1001
-
+      STREAMRIP_USER: ${STREAMRIP_USER}
+      STREAMRIP_PASS: ${STREAMRIP_PASS}
       STREAMRIP_CONFIG_DIR: /config
       STREAMRIP_DOWNLOAD_DIR: /music
       MAX_CONCURRENT_DOWNLOADS: 1
