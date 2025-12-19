@@ -235,24 +235,37 @@ function applyQuality(id, data) {
     const el = document.getElementById(`quality-${id}`);
     if (!el) return;
 
-    el.classList.remove('loading');
+    // reset state
+    el.classList.remove('loading', 'hires', 'cd', 'lossy', 'unknown');
 
-    if (!data?.quality?.bit_depth) {
+    if (!data || !data.quality) {
         el.textContent = 'Unknown';
         el.classList.add('unknown');
         return;
     }
 
-    el.textContent = data.quality.label ||
-        `${data.quality.bit_depth}-bit / ${data.quality.sample_rate} kHz`;
+    const q = data.quality;
 
-    el.classList.add(data.quality.bit_depth > 16 ? 'hires' : 'cd');
+    // Prefer backend-generated label
+    el.textContent =
+        q.label ||
+        (q.bit_depth && q.sample_rate
+            ? `${q.bit_depth}-bit / ${q.sample_rate} kHz`
+            : 'Unknown');
+
+    if (q.hires || q.bit_depth > 16) {
+        el.classList.add('hires');
+    } else {
+        el.classList.add('cd');
+    }
 }
 
 function inspectVisibleMediaQuality() {
     requestAnimationFrame(() => {
         document.querySelectorAll('.search-result-item').forEach(async el => {
-            const { source, type, id } = el.dataset;
+            const source = el.dataset.source;
+            const type = el.dataset.type;
+            const id = el.dataset.id;
 
             if (source === 'qobuz' && (type === 'track' || type === 'album')) {
                 const data = await fetchMediaQuality(source, type, id);
@@ -261,6 +274,7 @@ function inspectVisibleMediaQuality() {
         });
     });
 }
+
 
 /* ===============================
    ALBUM ART
