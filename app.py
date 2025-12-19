@@ -14,6 +14,23 @@ import sqlite3
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
+AUTH_USER = os.environ.get("STREAMRIP_USER")
+AUTH_PASS = os.environ.get("STREAMRIP_PASS")
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or auth.username != AUTH_USER or auth.password != AUTH_PASS:
+            return Response(
+                "Authentication required",
+                401,
+                {"WWW-Authenticate": 'Basic realm="Streamrip"'}
+            )
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ------------------------------------------------------------------------------
 # Logging
 # ------------------------------------------------------------------------------
