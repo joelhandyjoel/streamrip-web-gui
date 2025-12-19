@@ -8,8 +8,6 @@ services:
       context: .
       dockerfile: Dockerfile
 
-    image: streamrip-web-gui:local
-
     environment:
       PUID: 1000
       PGID: 1001
