@@ -234,10 +234,10 @@ function displayCurrentPage() {
             </div>
 
             <button class="result-download-btn"
-              id="download-btn-${r.id}"
-              onclick="downloadFromUrl('${r.url}')">
-          DOWNLOAD
-      </button>
+                    id="download-btn-${r.id}"
+                    onclick="downloadFromUrl('${r.url}')">
+                DOWNLOAD
+            </button>
         </div>
     `).join('');
    
