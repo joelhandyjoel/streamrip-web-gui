@@ -907,4 +907,22 @@ button:disabled {
     padding: 4px 8px;
 }
 
+.file-album-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.danger-btn {
+    border: 1px solid var(--error);
+    color: var(--error);
+    background: transparent;
+    font-size: 10px;
+    padding: 4px 8px;
+}
+
+.danger-btn:hover {
+    background: var(--error);
+    color: #000;
+}
 
