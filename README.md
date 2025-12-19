@@ -1,9 +1,7 @@
 ![streamrip web interface](https://github.com/AnOddName/streamrip-web-gui/blob/main/demo/home_screen.png?raw=true)
 
 
-<img width="1192" height="742" alt="image" src="https://github.com/user-attachments/assets/8f478406-2569-47c2-8513-8c42203e7254" />
-
-
+<img width="1191" height="1187" alt="image" src="https://github.com/user-attachments/assets/380f4433-409c-4d79-a3e6-64f295bd6ca2" />
 
 
 # Streamrip Web GUI
@@ -202,6 +200,7 @@ This tool is for educational purposes only. Ensure you comply with the terms of 
 
 
 Fueled by spite
+
 
 
 
