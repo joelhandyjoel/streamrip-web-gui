@@ -61,7 +61,24 @@
                     <button onclick="searchMusic()">SEARCH</button>
                 </div>
             </div>
-            
+
+			<div class="filters">
+			    <label>
+			        <input type="checkbox" id="filter-cd" checked>
+			        CD (16-bit)
+			    </label>
+			
+			    <label>
+			        <input type="checkbox" id="filter-hires" checked>
+			        24-bit
+			    </label>
+			
+			    <label>
+			        <input type="checkbox" id="filter-ultra" checked>
+			        True Hi-Res (≥88.2kHz)
+			    </label>
+			</div>
+			
             <div class="search-controls">
                 <div class="pagination">
                     <button id="prevPage" onclick="changePage(-1)" disabled>PREV</button>
