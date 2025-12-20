@@ -767,10 +767,61 @@ function switchTab(tab, element) {
     }
 }
 
+/* ===============================
+   FILTER BUTTONS
+================================ */
+
+function initFilters() {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+            applyFilters();
+        });
+    });
+}
+
+/* ===============================
+   FILTERING
+================================ */
+
+function isFilterEnabled(tier) {
+    const btn = document.querySelector(
+        `.filter-btn[data-filter="${tier}"], .filter-btn.${tier}`
+    );
+    return btn?.classList.contains('active');
+}
+
+sjunction applyFilters() {
+    document.querySelectorAll('.search-result-item').forEach(item => {
+
+        // Don’t hide items until quality is known
+        if (item.classList.contains('pending-quality')) {
+            item.style.display = '';
+            return;
+        }
+
+        const tier = item.dataset.qualityTier || 'unknown';
+
+        const hide =
+            (tier === 'cd' && !isFilterEnabled('cd')) ||
+            (tier === 'hires' && !isFilterEnabled('hires')) ||
+            (tier === 'ultra' && !isFilterEnabled('ultra'));
+
+        item.style.display = hide ? 'none' : '';
+    });
+}
+
 
 
 /* ===============================
    INIT
 ================================ */
 
-window.addEventListener('load', initializeSSE);
+/* ===============================
+   INIT
+================================ */
+
+window.addEventListener('load', () => {
+    initializeSSE();
+    initFilters();
+});
