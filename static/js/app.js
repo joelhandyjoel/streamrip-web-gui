@@ -229,8 +229,8 @@ function displayCurrentPage() {
         return;
     }
 
-    el.innerHTML = page.map(r => `
-        <div class="search-result-item"
+   el.innerHTML = page.map(r => `
+       <div class="search-result-item pending-quality"
             data-id="${r.id}"
             data-source="${r.service}"
             data-type="${r.type}">
@@ -341,6 +341,30 @@ function changePage(dir) {
 /* ===============================
    QUALITY (TRACKS + ALBUMS)
 ================================ */
+function applyFilters() {
+    const filters = {
+        cd: document.getElementById('filter-cd')?.checked,
+        hires: document.getElementById('filter-hires')?.checked,
+        ultra: document.getElementById('filter-ultra')?.checked,
+    };
+
+    document.querySelectorAll('.search-result-item').forEach(item => {
+        if (item.classList.contains('pending-quality')) {
+            item.style.display = '';
+            return;
+        }
+
+        const tier = item.dataset.qualityTier || 'unknown';
+
+        const hide =
+            (tier === 'cd' && !filters.cd) ||
+            (tier === 'hires' && !filters.hires) ||
+            (tier === 'ultra' && !filters.ultra);
+
+        item.style.display = hide ? 'none' : '';
+    });
+}
+
 
 async function fetchMediaQuality(source, type, id) {
     const key = `${source}:${type}:${id}`;
@@ -358,14 +382,20 @@ async function fetchMediaQuality(source, type, id) {
 }
 
 function applyQuality(id, data) {
-    const el = document.getElementById(`quality-${id}`);
-    if (!el) return;
+    const badge = document.getElementById(`quality-${id}`);
+    if (!badge) return;
 
-    el.classList.remove('loading', 'hires', 'cd', 'ultra', 'unknown');
+    const item = badge.closest('.search-result-item');
+    if (!item) return;
+
+    badge.classList.remove('loading', 'hires', 'cd', 'ultra', 'unknown');
+    item.classList.remove('pending-quality');
 
     if (!data?.quality?.bit_depth) {
-        el.textContent = 'Unknown';
-        el.classList.add('unknown');
+        badge.textContent = 'Unknown';
+        badge.classList.add('unknown');
+        item.dataset.qualityTier = 'unknown';
+        applyFilters();
         return;
     }
 
@@ -376,23 +406,14 @@ function applyQuality(id, data) {
     else if (q.bit_depth >= 24) tier = 'hires';
     else if (q.bit_depth === 16) tier = 'cd';
 
-    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
-    el.classList.add(tier);
+    badge.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
+    badge.classList.add(tier);
+    item.dataset.qualityTier = tier;
 
-    // 🔥 FILTERING
-    const filters = getQualityFilters();
-    const item = el.closest('.search-result-item');
-
-    if (
-        (tier === 'cd' && !filters.cd) ||
-        (tier === 'hires' && !filters.hires) ||
-        (tier === 'ultra' && !filters.ultra)
-    ) {
-        item.style.display = 'none';
-    } else {
-        item.style.display = '';
-    }
+    applyFilters();
 }
+
+
 
     // Label (prefer backend label if present)
     el.textContent =
