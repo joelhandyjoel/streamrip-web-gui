@@ -78,6 +78,14 @@ function handleDownloadProgress(data) {
     }
 }
 
+function getQualityFilters() {
+    return {
+        cd: document.getElementById('filter-cd')?.checked,
+        hires: document.getElementById('filter-hires')?.checked,
+        ultra: document.getElementById('filter-ultra')?.checked,
+    };
+}
+
 
 function handleDownloadCompleted(data) {
     const d = activeDownloads.get(data.id);
@@ -353,16 +361,38 @@ function applyQuality(id, data) {
     const el = document.getElementById(`quality-${id}`);
     if (!el) return;
 
-    // reset state
     el.classList.remove('loading', 'hires', 'cd', 'ultra', 'unknown');
 
-    if (!data || !data.quality || !data.quality.bit_depth) {
+    if (!data?.quality?.bit_depth) {
         el.textContent = 'Unknown';
         el.classList.add('unknown');
         return;
     }
 
     const q = data.quality;
+    let tier = 'unknown';
+
+    if (q.bit_depth >= 24 && q.sample_rate >= 88.2) tier = 'ultra';
+    else if (q.bit_depth >= 24) tier = 'hires';
+    else if (q.bit_depth === 16) tier = 'cd';
+
+    el.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
+    el.classList.add(tier);
+
+    // 🔥 FILTERING
+    const filters = getQualityFilters();
+    const item = el.closest('.search-result-item');
+
+    if (
+        (tier === 'cd' && !filters.cd) ||
+        (tier === 'hires' && !filters.hires) ||
+        (tier === 'ultra' && !filters.ultra)
+    ) {
+        item.style.display = 'none';
+    } else {
+        item.style.display = '';
+    }
+}
 
     // Label (prefer backend label if present)
     el.textContent =
