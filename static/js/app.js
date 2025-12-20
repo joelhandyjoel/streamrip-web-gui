@@ -12,6 +12,8 @@ let allSearchResults = [];
 let eventSource = null;
 let activeDownloads = new Map();
 let downloadHistory = [];
+let filteredResults = [];
+
 
 const qualityCache = new Map();
 const downloadedCache = new Map();
@@ -219,8 +221,12 @@ async function searchMusic() {
 
 
 function displayCurrentPage() {
+    const source = filteredResults.length
+        ? filteredResults
+        : allSearchResults;
+
     const start = (currentPage - 1) * itemsPerPage;
-    const page = allSearchResults.slice(start, start + itemsPerPage);
+    const page = source.slice(start, start + itemsPerPage);
 
     const el = document.getElementById('searchResults');
 
@@ -229,11 +235,11 @@ function displayCurrentPage() {
         return;
     }
 
-   el.innerHTML = page.map(r => `
-       <div class="search-result-item pending-quality"
-            data-id="${r.id}"
-            data-source="${r.service}"
-            data-type="${r.type}">
+    el.innerHTML = page.map(r => `
+        <div class="search-result-item pending-quality"
+             data-id="${r.id}"
+             data-source="${r.service}"
+             data-type="${r.type}">
 
             <div class="result-album-art placeholder" id="art-${r.id}">🎵</div>
 
@@ -256,7 +262,7 @@ function displayCurrentPage() {
             </button>
         </div>
     `).join('');
-   
+
     updatePaginationControls();
     loadAlbumArtForVisibleItems();
     inspectVisibleMediaQuality();
@@ -307,27 +313,22 @@ async function inspectDownloadedState() {
 ================================ */
 
 function updatePaginationControls() {
-    const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
+    const source = filteredResults.length
+        ? filteredResults
+        : allSearchResults;
 
-    // Page label
-    const pageInfo = document.getElementById('pageInfo');
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    }
+    const totalPages = Math.max(1, Math.ceil(source.length / itemsPerPage));
 
-    // Results count
-    const resultsCount = document.getElementById('resultsCount');
-    if (resultsCount) {
-        resultsCount.textContent = `${totalResults} RESULTS`;
-    }
+    document.getElementById('pageInfo').textContent =
+        `Page ${currentPage} of ${totalPages}`;
 
-    // Prev / Next buttons
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
+    document.getElementById('resultsCount').textContent =
+        `${source.length} RESULTS`;
 
-    if (prevBtn) prevBtn.disabled = currentPage <= 1;
-    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
 }
+
 
 
 function changePage(dir) {
@@ -367,10 +368,13 @@ function applyQuality(id, data) {
     badge.classList.remove('loading', 'hires', 'cd', 'ultra', 'unknown');
     item.classList.remove('pending-quality');
 
+    const result = allSearchResults.find(r => r.id === id);
+    if (!result) return;
+
     if (!data?.quality?.bit_depth) {
         badge.textContent = 'Unknown';
         badge.classList.add('unknown');
-        item.dataset.qualityTier = 'unknown';
+        result._qualityTier = 'unknown';
         applyFilters();
         return;
     }
@@ -384,10 +388,11 @@ function applyQuality(id, data) {
 
     badge.textContent = q.label || `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
     badge.classList.add(tier);
-    item.dataset.qualityTier = tier;
 
+    result._qualityTier = tier;
     applyFilters();
 }
+
 
 
 
@@ -747,24 +752,22 @@ function isFilterEnabled(tier) {
 }
 
 function applyFilters() {
-    document.querySelectorAll('.search-result-item').forEach(item => {
+    const enabled = {
+        cd: isFilterEnabled('cd'),
+        hires: isFilterEnabled('hires'),
+        ultra: isFilterEnabled('ultra')
+    };
 
-        // Don't hide until quality known
-        if (item.classList.contains('pending-quality')) {
-            item.style.display = '';
-            return;
-        }
-
-        const tier = item.dataset.qualityTier || 'unknown';
-
-        const hide =
-            (tier === 'cd' && !isFilterEnabled('cd')) ||
-            (tier === 'hires' && !isFilterEnabled('hires')) ||
-            (tier === 'ultra' && !isFilterEnabled('ultra'));
-
-        item.style.display = hide ? 'none' : '';
+    filteredResults = allSearchResults.filter(r => {
+        const tier = r._qualityTier;
+        if (!tier) return true; // keep until quality known
+        return enabled[tier] !== false;
     });
+
+    currentPage = 1;
+    displayCurrentPage();
 }
+
 
 
 
