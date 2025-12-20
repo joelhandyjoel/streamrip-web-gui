@@ -342,34 +342,6 @@ function changePage(dir) {
 
 
 
-/* ===============================
-   QUALITY (TRACKS + ALBUMS)
-================================ */
-function applyFilters() {
-    const filters = {
-        cd: document.getElementById('filter-cd')?.checked,
-        hires: document.getElementById('filter-hires')?.checked,
-        ultra: document.getElementById('filter-ultra')?.checked,
-    };
-
-    document.querySelectorAll('.search-result-item').forEach(item => {
-        if (item.classList.contains('pending-quality')) {
-            item.style.display = '';
-            return;
-        }
-
-        const tier = item.dataset.qualityTier || 'unknown';
-
-        const hide =
-            (tier === 'cd' && !filters.cd) ||
-            (tier === 'hires' && !filters.hires) ||
-            (tier === 'ultra' && !filters.ultra);
-
-        item.style.display = hide ? 'none' : '';
-    });
-}
-
-
 async function fetchMediaQuality(source, type, id) {
     const key = `${source}:${type}:${id}`;
     if (qualityCache.has(key)) return qualityCache.get(key);
@@ -417,27 +389,6 @@ function applyQuality(id, data) {
     applyFilters();
 }
 
-
-
-    // Label (prefer backend label if present)
-    el.textContent =
-        q.label ||
-        `${q.bit_depth}-bit / ${q.sample_rate} kHz`;
-
-    // 🎯 Tier logic
-    if (q.bit_depth >= 24 && q.sample_rate >= 88.2) {
-        // TRUE high-res masters (88.2 / 96 / 176.4 / 192)
-        el.classList.add('ultra');
-    } else if (q.bit_depth >= 24) {
-        // 24-bit but base rate (44.1 / 48)
-        el.classList.add('hires');
-    } else if (q.bit_depth === 16) {
-        // CD quality
-        el.classList.add('cd');
-    } else {
-        el.classList.add('unknown');
-    }
-}
 
 
 function inspectVisibleMediaQuality() {
@@ -784,6 +735,10 @@ function initFilters() {
    FILTERING
 ================================ */
 
+/* ===============================
+   FILTERING
+================================ */
+
 function isFilterEnabled(tier) {
     const btn = document.querySelector(
         `.filter-btn[data-filter="${tier}"], .filter-btn.${tier}`
@@ -791,10 +746,10 @@ function isFilterEnabled(tier) {
     return btn?.classList.contains('active');
 }
 
-sjunction applyFilters() {
+function applyFilters() {
     document.querySelectorAll('.search-result-item').forEach(item => {
 
-        // Don’t hide items until quality is known
+        // Don't hide until quality known
         if (item.classList.contains('pending-quality')) {
             item.style.display = '';
             return;
@@ -810,6 +765,8 @@ sjunction applyFilters() {
         item.style.display = hide ? 'none' : '';
     });
 }
+
+
 
 
 
