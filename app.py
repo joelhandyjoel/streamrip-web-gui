@@ -73,15 +73,21 @@ sse_clients = []
 @app.before_request
 def enforce_auth():
     if not AUTH_ENABLED:
-        return
+        return None
 
-    # Allow static files
-    if request.path.startswith("/static"):
-        return
+    path = request.path
 
-    # Allow SSE (EventSource does not send auth headers reliably)
-    if request.path == "/api/events":
-        return
+    # ✅ Allow static files
+    if path.startswith("/static"):
+        return None
+
+    # ✅ Allow favicon (VERY IMPORTANT)
+    if path == "/favicon.ico":
+        return None
+
+    # ✅ Allow SSE
+    if path == "/api/events":
+        return None
 
     auth = request.authorization
     if not auth or auth.username != AUTH_USER or auth.password != AUTH_PASS:
@@ -90,6 +96,9 @@ def enforce_auth():
             401,
             {"WWW-Authenticate": 'Basic realm="Streamrip"'},
         )
+
+    return None
+
 
 
 # ------------------------------------------------------------------------------
