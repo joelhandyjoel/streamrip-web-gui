@@ -1036,3 +1036,30 @@ button:disabled {
     background: transparent;
     color: var(--text-secondary);
 }
+
+.qobuz-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.filter-btn {
+    background: #111;
+    border: 1px solid #333;
+    color: #aaa;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-btn.active {
+    color: #fff;
+    border-color: #fff;
+}
+
+.filter-btn.ultra.active {
+    border-color: #00ffd5;
+    color: #00ffd5;
+}
+
