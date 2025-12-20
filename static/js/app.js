@@ -299,10 +299,28 @@ async function inspectDownloadedState() {
 ================================ */
 
 function updatePaginationControls() {
-    const pages = Math.ceil(totalResults / itemsPerPage);
-    document.getElementById('pageInfo').textContent =
-        `Page ${currentPage} of ${pages}`;
+    const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
+
+    // Page label
+    const pageInfo = document.getElementById('pageInfo');
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
+
+    // Results count
+    const resultsCount = document.getElementById('resultsCount');
+    if (resultsCount) {
+        resultsCount.textContent = `${totalResults} RESULTS`;
+    }
+
+    // Prev / Next buttons
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
 }
+
 
 function changePage(dir) {
     const pages = Math.ceil(totalResults / itemsPerPage);
