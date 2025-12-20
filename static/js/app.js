@@ -338,6 +338,10 @@ function changePage(dir) {
     displayCurrentPage();
 }
 
+
+
+
+
 /* ===============================
    QUALITY (TRACKS + ALBUMS)
 ================================ */
